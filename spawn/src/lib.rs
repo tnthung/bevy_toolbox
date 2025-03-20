@@ -18,9 +18,9 @@ use proc_macro::TokenStream;
 /// ```rs, no_run
 /// spawn! { commands
 ///   (Button)
-///   .[ // children
-///     (Text::new("Hello, World!"))
-///   ];
+///     .[ // children
+///       (Text::new("Hello, World!"))
+///     ];
 /// }
 /// ```
 ///
@@ -54,6 +54,21 @@ use proc_macro::TokenStream;
 /// ```rs, no_run
 /// spawn! { commands
 ///   uwu > (Button);
+/// }
+/// ```
+///
+/// ## Only top level entity can have parent:
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   uwu (Button);
+///
+///   uwu > (Button); // ok
+///
+///   (Button)
+///     .[
+///       uwu > (Button); // error
+///     ]
 /// }
 /// ```
 ///
@@ -114,8 +129,8 @@ use proc_macro::TokenStream;
 ///     .{ /* still, order does matter, this will be execute after the first one */ }
 ///
 ///     .{
-///       // `this` refers to the current `Entity`
-///       // while `entity` refers to the current `EntityCommands`
+///       // previously mentioned `this` exposes the current `Entity`
+///       // here `entity` exposes the current `EntityCommands`
 ///     }
 ///
 ///     // normal observe method
