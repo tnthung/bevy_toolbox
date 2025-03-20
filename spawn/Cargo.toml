@@ -1,7 +1,10 @@
 [package]
-name    = "bevy_toolbox_spawn"
-version = "0.1.0"
-edition = "2021"
+name        = "bevy_toolbox_spawn"
+version     = "0.2.0"
+edition     = "2021"
+license     = "MIT"
+repository  = "https://github.com/tnthung/bevy_toolbox"
+description = "Spawn macro for bevy_toolbox"
 
 [lib]
 proc-macro = true
