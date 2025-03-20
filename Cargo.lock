@@ -6,7 +6,18 @@ version = 4
 name = "bevy_toolbox"
 version = "0.1.0"
 dependencies = [
- "spawn",
+ "bevy_toolbox_spawn",
+]
+
+[[package]]
+name = "bevy_toolbox_spawn"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4912e56a92482a78997750b7c747ad2dac94f37c67ccdc14278775685b1e6558"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -25,15 +36,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
 dependencies = [
  "proc-macro2",
-]
-
-[[package]]
-name = "spawn"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
