@@ -98,15 +98,16 @@ use proc_macro::TokenStream;
 /// * `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
 ///
 /// ```txt
-/// spawn       ::= spawner entity<';'>* ;
-/// entity      ::= parenting? name? '(' component<','> ')' (method_call | children)* ;
-/// method_call ::= '.' name '(' EXPR<','>* ')' | observe ;
-/// observe     ::= '.' '(' EXPR_CLOSURE ')' ;
-/// children    ::= '.' '[' entity<';'>* ']' ;
+/// spawn       ::= spawner (parenting? entity)<';'>* ;
+/// entity      ::= name? '(' component<','> ')' extension* ;
+/// extension   ::= '.' (children | method_call | observe) ;
+/// method_call ::= name '(' EXPR<','>* ')' ;
+/// observe     ::= '(' EXPR_CLOSURE ')' ;
+/// children    ::= '[' entity<';'>* ']' ;
 /// parenting   ::= name '>' ;
-/// component   ::= EXPR ;
 /// method_call ::= '.' name '(' EXPR<','>* ')' ;
 /// name        ::= IDENT ;
+/// component   ::= EXPR ;
 /// ```
 #[proc_macro]
 pub fn spawn(input: TokenStream) -> TokenStream {
@@ -118,12 +119,10 @@ pub fn spawn(input: TokenStream) -> TokenStream {
   if input.is_empty() { return TokenStream::new(); }
 
   struct Entity {
-    parent      : Option<Ident>,
-    name        : Option<Ident>,
-    components  : Vec<Expr>,
-    method_calls: Vec<(Option<Ident>, Vec<Expr>)>,
-    unfinished  : Vec<(Token![.], Option<Ident>)>,
-    children    : Vec<Entity>,
+    parent    : Option<Ident>,
+    name      : Option<Ident>,
+    components: Vec<Expr>,
+    extensions: Vec<Extension>,
   }
 
   struct Spawn {
@@ -131,12 +130,14 @@ pub fn spawn(input: TokenStream) -> TokenStream {
     entities: Vec<Entity>,
   }
 
+  enum Extension {
+    Children(Vec<Entity>),
+    Unfinished(Token![.], Option<Ident>),
+    MethodCall(Option<Ident>, Vec<Expr>),
+  }
+
   impl Parse for Entity {
     fn parse(input: ParseStream) -> Result<Self> {
-      let mut children     = vec![];
-      let mut method_calls = vec![];
-      let mut unfinished   = vec![];
-
       let parent = if input.peek(Ident) && input.peek2(Token![>]) {
         let parent = Some(input.parse()?);
         input.parse::<Token![>]>()?;
@@ -160,52 +161,21 @@ pub fn spawn(input: TokenStream) -> TokenStream {
           .into_iter().collect()
       };
 
-      while input.peek(Token![.]) {
-        let dot = input.parse::<Token![.]>()?;
+      let extensions = {
+        let mut extensions = vec![];
 
-        if input.peek(Ident) {
-          let method = input.parse().ok();
-
-          if input.peek(Paren) && method.is_some() {
-            let content;
-            parenthesized!(content in input);
-
-            method_calls.push((method, content.parse_terminated(
-              Expr::parse, Token![,])?.into_iter().collect()));
-            continue;
-          }
-
-          unfinished.push((dot, method));
-          continue;
+        while input.peek(Token![.]) {
+          extensions.push(input.parse()?);
         }
 
-        if input.peek(Paren) {
-          let content;
-          parenthesized!(content in input);
-
-          method_calls.push((None, vec![content.parse()?]));
-          continue;
-        }
-
-        if input.peek(Bracket) {
-          let content;
-          bracketed!(content in input);
-
-          children.extend(content
-            .parse_terminated(Entity::parse, Token![;])?);
-          continue;
-        }
-
-        unfinished.push((dot, None));
-      }
+        extensions
+      };
 
       Ok(Entity {
         parent,
         name,
         components,
-        method_calls,
-        unfinished,
-        children,
+        extensions,
       })
     }
   }
@@ -222,56 +192,109 @@ pub fn spawn(input: TokenStream) -> TokenStream {
     }
   }
 
-  fn convert(entity: Entity) -> proc_macro2::TokenStream {
-    let mut result = quote! {};
+  impl Parse for Extension {
+    fn parse(input: ParseStream) -> Result<Self> {
+      let dot = input.parse::<Token![.]>()?;
 
-    let has_children = !entity.children.is_empty();
-    let children     = entity.children.into_iter().map(convert);
-    let components   = entity.components;
-    let method_calls = entity.method_calls;
+      if input.peek(Ident) {
+        let method = input.parse().ok();
 
-    if let Some(name) = entity.name {
-      result.extend(quote! { let #name = });
+        if input.peek(Paren) && method.is_some() {
+          let content;
+          parenthesized!(content in input);
+
+          return Ok(Extension::MethodCall(
+            method,
+            content
+              .parse_terminated(Expr::parse, Token![,])?
+              .into_iter().collect()));
+        }
+
+        return Ok(Extension::Unfinished(dot, method));
+      }
+
+      if input.peek(Paren) {
+        let content;
+        parenthesized!(content in input);
+
+        return Ok(Extension::MethodCall(
+          None, vec![content.parse()?]))
+      }
+
+      if input.peek(Bracket) {
+        let content;
+        bracketed!(content in input);
+
+        let mut children = vec![];
+
+        for mut child in content.parse_terminated(Entity::parse, Token![;])? {
+          if child.parent.is_some() {
+            return Err(Error::new(
+              child.parent.as_ref().unwrap().span(),
+              "Only top level entity can have parent"));
+          }
+
+          child.parent = Some(Ident::new("parent", proc_macro2::Span::call_site()));
+          children.push(child);
+        }
+
+        return Ok(Extension::Children(children));
+      }
+
+      return Ok(Extension::Unfinished(dot, None));
+    }
+  }
+
+  fn convert(entity: Entity, top_level: bool) -> proc_macro2::TokenStream {
+    let mut content = quote! {};
+
+    let Entity {
+      parent,
+      name,
+      components,
+      mut extensions,
+    } = entity;
+
+    if !top_level {
+      content.extend(quote! {
+        let parent = this;
+      });
     }
 
-    let parenting = if let Some(parent) = entity.parent {
-      quote! { entity.set_parent(#parent); }
-    } else {
-      quote! {}
-    };
-
-    let children = if has_children {
-      quote! { entity.with_children(|spawner| { #(#children)* }); }
-    } else {
-      quote! {}
-    };
-
-    let method_calls = method_calls.iter().map(|(method, args)| {
-      let method = method.as_ref().map(|m| quote! { #m }).unwrap_or(quote! { observe });
-      quote! { entity.#method(#(#args),*); }
-    });
-
-    let unfinished = entity.unfinished.iter().map(|(dot, method)| {
-      quote! { entity #dot #method }
-    });
-
-    result.extend(quote! {{
+    content.extend(quote! {
       let mut entity = spawner.spawn((
         #(#components),*
       ));
 
       let this = entity.id();
+    });
 
-      #(#method_calls;)*
-      #(#unfinished)*
+    if let Some(parent) = parent {
+      content.extend(quote! {
+        entity.set_parent(#parent);
+      });
+    }
 
-      #children
-      #parenting
+    for ext in extensions.drain(..) {
+      content.extend(match ext {
+        Extension::Children(entities) => {
+          let mut result = quote! {};
 
-      this
-    };});
+          for entity in entities {
+            result.extend(convert(entity, false));
+          }
 
-    result
+          quote! {{ #result }}
+        },
+
+        Extension::Unfinished(dot, name       ) => quote! { entity #dot #name },
+        Extension::MethodCall(None      , args) => quote! { entity.observe(#(#args),*); },
+        Extension::MethodCall(Some(name), args) => quote! { entity. #name (#(#args),*); },
+      });
+    }
+
+    let naming = name.map(|n| quote! { let #n = });
+    quote! { #naming { #content this }; }
   }
 
   let Spawn { spawner, entities } =
@@ -280,7 +303,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
   let mut result = quote! {};
 
   for entity in entities {
-    result.extend(convert(entity));
+    result.extend(convert(entity, true));
   }
 
   quote! {{
