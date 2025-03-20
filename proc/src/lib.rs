@@ -84,6 +84,15 @@ use proc_macro::TokenStream;
 /// }
 /// ```
 ///
+/// ## `observe` method name can be omitted:
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   (Button)
+///     .(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); });
+/// }
+/// ```
+///
 /// # Grammar
 ///
 /// * `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
@@ -91,7 +100,8 @@ use proc_macro::TokenStream;
 /// ```txt
 /// spawn       ::= spawner entity<';'>* ;
 /// entity      ::= parenting? name? '(' component<','> ')' (method_call | children)* ;
-/// method_call ::= '.' name '(' EXPR<','>* ')' ;
+/// method_call ::= '.' name '(' EXPR<','>* ')' | observe ;
+/// observe     ::= '.' '(' EXPR_CLOSURE ')' ;
 /// children    ::= '.' '[' entity<';'>* ']' ;
 /// parenting   ::= name '>' ;
 /// component   ::= EXPR ;
@@ -102,6 +112,7 @@ use proc_macro::TokenStream;
 pub fn spawn(input: TokenStream) -> TokenStream {
   use syn::*;
   use syn::parse::*;
+  use syn::token::*;
   use quote::*;
 
   if input.is_empty() { return TokenStream::new(); }
@@ -110,7 +121,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
     parent      : Option<Ident>,
     name        : Option<Ident>,
     components  : Vec<Expr>,
-    method_calls: Vec<(Ident, Vec<Expr>)>,
+    method_calls: Vec<(Option<Ident>, Vec<Expr>)>,
     children    : Vec<Entity>,
   }
 
@@ -122,7 +133,6 @@ pub fn spawn(input: TokenStream) -> TokenStream {
   impl Parse for Entity {
     fn parse(input: ParseStream) -> Result<Self> {
       let mut children     = vec![];
-      let mut components   = vec![];
       let mut method_calls = vec![];
 
       let parent = if input.peek(Ident) && input.peek2(Token![>]) {
@@ -139,13 +149,14 @@ pub fn spawn(input: TokenStream) -> TokenStream {
         None
       };
 
-      {
+      let components = {
         let content;
         parenthesized!(content in input);
 
-        components.extend(content
-          .parse_terminated(Expr::parse, Token![,])?);
-      }
+        content
+          .parse_terminated(Expr::parse, Token![,])?
+          .into_iter().collect()
+      };
 
       while input.peek(Token![.]) {
         input.parse::<Token![.]>()?;
@@ -155,15 +166,29 @@ pub fn spawn(input: TokenStream) -> TokenStream {
           let content;
           parenthesized!(content in input);
 
-          method_calls.push((method, content.parse_terminated(Expr::parse, Token![,])?.into_iter().collect()));
+          method_calls.push((method, content.parse_terminated(
+            Expr::parse, Token![,])?.into_iter().collect()));
           continue;
         }
 
-        let content;
-        bracketed!(content in input);
+        if input.peek(Paren) {
+          let content;
+          parenthesized!(content in input);
 
-        children.extend(content
-          .parse_terminated(Entity::parse, Token![;])?);
+          method_calls.push((None, vec![content.parse()?]));
+          continue;
+        }
+
+        if input.peek(Bracket) {
+          let content;
+          bracketed!(content in input);
+
+          children.extend(content
+            .parse_terminated(Entity::parse, Token![;])?);
+          continue;
+        }
+
+        return Err(input.error("expected method call or children"));
       }
 
       Ok(Entity {
@@ -213,6 +238,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
     };
 
     let method_calls = method_calls.iter().map(|(method, args)| {
+      let method = method.as_ref().map(|m| quote! { #m }).unwrap_or(quote! { observe });
       quote! { entity.#method(#(#args),*); }
     });
 
