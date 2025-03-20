@@ -3,160 +3,224 @@ use proc_macro::TokenStream;
 
 /// This macro is used to simplify the entity creation of the bevy engine.
 ///
-/// # Example
+/// # Basics
 ///
-/// ## To create a single entity with a transform component:
+/// ## Spawner
+///
+/// Spawner is the object that have `spawn` method which takes a bevy bundle and returns
+/// `EntityCommands` as the result.
 ///
 /// ```rs, no_run
-/// spawn! { commands // world, or anything that have `spawn` method which returns `EntityCommands`
-///   (Transform::default())
+/// fn foo(mut commands: Commands) {
+///   // commands can be used as spawner
+/// }
+///
+/// fn bar(world: &mut World) {
+///   // world can be used as spawner
 /// }
 /// ```
 ///
-/// ## To create a single entity with a button component with a text child:
+/// ## Top level
+///
+/// Top level means the part of the macro thats been directly quoted by the macro itself.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   // here is the top level
+///
+///   ().[
+///     // here is not the top level
+///   ];
+/// }
+/// ```
+///
+/// ## Entity definition
+///
+/// An entity definition is a tuple of components that will be spawned as an entity.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   // entity definition
+///   (Button, Node::default());
+/// }
+/// ```
+///
+/// Top level can accept multiple entity definitions.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   // entity 1
+///   (Button, Node::default());
+///
+///   // entity 2
+///   (Button, Node::default());
+/// }
+/// ```
+///
+/// ## Order
+///
+/// The order of any bit in the macro matters. The execution order is strictly follow the macro input.
+///
+/// ```rs, no_run
+/// // entity `a` will always being spawned before `b`
+/// spawn! { commands
+///   a ();
+///   b ();
+/// }
+/// ```
+///
+/// ## Naming
+///
+/// An entity can be named for later reference. The variable will hold the `Entity` of the corresponding
+/// entity, NOT THE `EntityCommands`.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   entity_1 (Button, Node::default());
+///   entity_2 (Button, Node::default());
+///
+///   (Button)
+///     .(move |_: Trigger<Pointer<Click>>, mut commands: Commands| {
+///       // referencing the entity_1 after it's been spawned
+///       commands.entity(entity_1).despawn();
+///     });
+///
+///   {
+///     println!("{entity_1:?}");
+///     println!("{entity_2:?}");
+///   };
+/// }
+/// ```
+///
+/// ## Parenting
+///
+/// A top level entities can have explicit parent. Parenting is done by using `>` operator.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   my_entity (Button);
+///
+///   // this entity will be spawned as a child of `my_entity`
+///   my_entity > (Button);
+///
+///   // it's also possible to use the entity outside the macro
+///   // just make sure the parent is `Entity` type
+///   some_outside_entity > (Button);
+///
+///   // parenting and naming can be combined
+///   parent > child (Button);
+/// }
+/// ```
+///
+/// ## Code block injection
+///
+/// Since the entities inside the macro is enclosed within a generated scope to prevent the namespace
+/// pollution, code block injection makes it possible to execute code without leaving the macro.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   entity_1 (Button);
+///   entity_2 (Button);
+///
+///   {
+///     println!("This is inside a code block!");
+///     println!("{entity_1:?}");
+///     println!("{entity_2:?}");
+///
+///     // you can do whatever you want here, just make sure the ownership of spawner will not be taken
+///     // if you want to spawn any entities after this code block
+///   };
+/// }
+/// ```
+///
+/// ## Extension
+///
+/// An entity can be extended with any number of:
+///
+/// 1. Children Group
+/// 1. Method Call
+/// 1. Code Block
+///
+/// All extensions are started with `.` after the entity definition.
+///
+/// ### Children Group
+///
+/// Children group is a group of entities that will be spawned as children of the parent entity. We
+/// use `[]` to define a new children group. A children group can have multiple entities. Within the
+/// same group, the entities can reference each other, but entities in 2 different groups under same
+/// parent can't.
 ///
 /// ```rs, no_run
 /// spawn! { commands
 ///   (Button)
-///     .[ // children
-///       (Text::new("Hello, World!"))
-///     ];
-/// }
-/// ```
+///     .[
+///       a (Text::new("Hello, World!"));
+///       b (Text::new("Hello, World!"));
 ///
-/// ## To create a single entity with a button component with a text child, print `Hello, World!` when
-/// clicked:
-///
-/// ```rs, no_run
-/// spawn! { commands
-///   (Button)
-///     .[ // children
-///       (Text::new("Hello, World!"))
+///       {
+///         // code block injection is also possible
+///         // you can access `a` and `b` here
+///       };
 ///     ]
+///     .[
+///       c (Text::new("Hello, World!"));
+///
+///       {
+///         // you can't access `a`, `b`, but `c`
+///       };
+///     ];
+/// ```
+///
+/// ### Method Call
+///
+/// Method call is a call to a method of `EntityCommands`. The auto completion is supported for the
+/// method name and the arguments.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   (Button)
+///     .[(Text::new("Hello, World!"))]
 ///     .observe(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); });
 /// }
 /// ```
 ///
-/// ## Spawn multiple entities:
-///
-/// ```rs, no_run
-/// spawn! { commands
-///   (Button);
-///   (Button);
-///   (Button);
-/// }
-/// ```
-///
-/// ## Spawn children for existing entity:
-///
-/// * Assuming the parent `Entity` called `uwu` and already spawned.
-///
-/// ```rs, no_run
-/// spawn! { commands
-///   uwu > (Button);
-/// }
-/// ```
-///
-/// ## Only top level entity can have parent:
-///
-/// ```rs, no_run
-/// spawn! { commands
-///   uwu (Button);
-///
-///   uwu > (Button); // ok
-///
-///   (Button)
-///     .[
-///       uwu > (Button); // error
-///     ]
-/// }
-/// ```
-///
-/// ## Name a entity and reference it later:
-///
-/// ```rs, no_run
-/// spawn! { commands
-///   owo (Text::new("Hello, World!"));
-///   uwu (Button);
-///
-///   uwu > (Button);  // another way of spawning children of `uwu`
-///
-///   (Button)
-///     .observe(move |_: Trigger<Pointer<Click>>, mut commands: Commands| {
-///       commands.entity(owo).insert(Text::new("This is new text!"));
-///     });
-/// }
-/// ```
-///
-/// ## Reference current entity with `this`:
-///
-/// ```rs, no_run
-/// spawn! { commands
-///   (Button, BackgroundColor(Color::srgb(0.0, 0.0, 0.0)))
-///     .observe(move |_: Trigger<Pointer<Click>>, mut commands: Commands| {
-///        commands.entity(this).insert(BackgroundColor(Color::srgb(1.0, 1.0, 1.0)));
-///     });
-/// }
-/// ```
-///
-/// ## `observe` method name can be omitted:
+/// Since `observe` is most likely to be used, a shortcut is provided to omit the method name.
 ///
 /// ```rs, no_run
 /// spawn! { commands
 ///   (Button)
+///     .[(Text::new("Hello, World!"))]
 ///     .(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); });
 /// }
 /// ```
 ///
-/// ## Embed code block:
+/// To reference the current entity, you can use `this` for `Entity` and `entity` for `EntityCommands`.
 ///
 /// ```rs, no_run
 /// spawn! { commands
-///   // code block in top level
-///   entity_a (Button);
+///   (Button, BackgroundColor(Color::srgb(0.0, 0.0, 0.0)))
+///     .[(Text::new("Hello, World!"))]
+///     .(move |_: Trigger<Pointer<Click>>, mut commands: Commands| {
+///       commands.entity(this).insert(BackgroundColor(Color::srgb(1.0, 1.0, 1.0)));
+///     });
+/// }
+/// ```
 ///
-///   {
-///     // injecting code block between the spawning of `entity_a` and `entity_b`
-///     println!("This is inside a code block!");
-///     println!("{entity_a:?}");
-///   };
+/// ### Code Block
 ///
-///   entity_b (Button); // order matters, previous code block can't access `entity_b`
+/// Code block is a block of code that will be executed in the context of the entity. As previously
+/// mentioned, the code block can also access `this` and `entity` variables.
 ///
-///   // code block as extension
+/// ```rs, no_run
+/// spawn! { commands
 ///   (Button)
-///     .{ /* you can also inject code block when defining entity, don't forget the `.` */ }
-///     .{ /* still, order does matter, this will be execute after the first one */ }
-///
 ///     .{
-///       // previously mentioned `this` exposes the current `Entity`
-///       // here `entity` exposes the current `EntityCommands`
-///     }
+///       // print the entity id of the current entity
+///       println!("{this:?}");
 ///
-///     // normal observe method
-///     .(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); })
-///
-///     // normal children definitions
-///     .[ (Text::new("Hello, World!")) ];
-///
-///   // code block in children extension
-///   (Button)
-///     .[
-///       // you can also inject code block here too
-///       // because children group is designed to be enclosed
-///       // and will not leak the children to the ancestors
-///       uwu (Text::new("Hello, World!"));
-///
-///       // no problem
-///       { println!("{uwu:?}"); }
-///     ]
-///     .[
-///       // `uwu` does not accessible here
-///       { println!("{uwu:?}"); }
-///     ];
-///
-///    // `uwu` also does not accessible here
-///    { println!("{uwu:?}"); }
+///       // manually adding a child
+///       entity.with_child((Text::new("Hello, World!")));
+///     };
 /// }
 /// ```
 ///
