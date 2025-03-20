@@ -30,13 +30,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple-bevy-spawn"
-version = "0.1.0"
-dependencies = [
- "proc",
-]
-
-[[package]]
 name = "syn"
 version = "2.0.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
