@@ -93,21 +93,74 @@ use proc_macro::TokenStream;
 /// }
 /// ```
 ///
+/// ## Embed code block:
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   // code block in top level
+///   entity_a (Button);
+///
+///   {
+///     // injecting code block between the spawning of `entity_a` and `entity_b`
+///     println!("This is inside a code block!");
+///     println!("{entity_a:?}");
+///   };
+///
+///   entity_b (Button); // order matters, previous code block can't access `entity_b`
+///
+///   // code block as extension
+///   (Button)
+///     .{ /* you can also inject code block when defining entity, don't forget the `.` */ }
+///     .{ /* still, order does matter, this will be execute after the first one */ }
+///
+///     .{
+///       // `this` refers to the current `Entity`
+///       // while `entity` refers to the current `EntityCommands`
+///     }
+///
+///     // normal observe method
+///     .(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); })
+///
+///     // normal children definitions
+///     .[ (Text::new("Hello, World!")) ];
+///
+///   // code block in children extension
+///   (Button)
+///     .[
+///       // you can also inject code block here too
+///       // because children group is designed to be enclosed
+///       // and will not leak the children to the ancestors
+///       uwu (Text::new("Hello, World!"));
+///
+///       // no problem
+///       { println!("{uwu:?}"); }
+///     ]
+///     .[
+///       // `uwu` does not accessible here
+///       { println!("{uwu:?}"); }
+///     ];
+///
+///    // `uwu` also does not accessible here
+///    { println!("{uwu:?}"); }
+/// }
+/// ```
+///
 /// # Grammar
 ///
 /// * `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
 ///
 /// ```txt
-/// spawn       ::= spawner (parenting? entity)<';'>* ;
+/// spawn       ::= spawner (parenting? entity | code_block)<';'>* ;
 /// entity      ::= name? '(' component<','> ')' extension* ;
-/// extension   ::= '.' (children | method_call | observe) ;
+/// extension   ::= '.' (children | method_call | observe | code_block) ;
 /// method_call ::= name '(' EXPR<','>* ')' ;
 /// observe     ::= '(' EXPR_CLOSURE ')' ;
-/// children    ::= '[' entity<';'>* ']' ;
+/// children    ::= '[' (entity | code_block)<';'>* ']' ;
 /// parenting   ::= name '>' ;
 /// method_call ::= '.' name '(' EXPR<','>* ')' ;
 /// name        ::= IDENT ;
 /// component   ::= EXPR ;
+/// code_block  ::= EXPR_BLOCK ;
 /// ```
 #[proc_macro]
 pub fn spawn(input: TokenStream) -> TokenStream {
@@ -120,7 +173,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 
   struct Spawn {
     spawner : Ident,
-    entities: Vec<Entity>,
+    children: Vec<OrCode<Entity>>,
   }
 
   struct Entity {
@@ -131,9 +184,15 @@ pub fn spawn(input: TokenStream) -> TokenStream {
   }
 
   enum Extension {
-    Children(Vec<Entity>),
+    Children  (Vec<OrCode<Entity>>),
+    CodeBlock (proc_macro2::Group),
     Unfinished(Token![.], Option<Ident>),
     MethodCall(Option<Ident>, Vec<Expr>),
+  }
+
+  enum OrCode<T: Parse> {
+    Code(proc_macro2::Group),
+    Else(T),
   }
 
   impl Parse for Entity {
@@ -184,8 +243,8 @@ pub fn spawn(input: TokenStream) -> TokenStream {
     fn parse(input: ParseStream) -> Result<Self> {
       Ok(Spawn {
         spawner: input.parse()?,
-        entities: input
-          .parse_terminated(Entity::parse, Token![;])?
+        children: input
+          .parse_terminated(OrCode::<Entity>::parse, Token![;])?
           .into_iter()
           .collect(),
       })
@@ -227,21 +286,38 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 
         let mut children = vec![];
 
-        for mut child in content.parse_terminated(Entity::parse, Token![;])? {
-          if child.parent.is_some() {
-            return Err(Error::new(
-              child.parent.as_ref().unwrap().span(),
-              "Only top level entity can have parent"));
+        for mut child in content.parse_terminated(OrCode::<Entity>::parse, Token![;])? {
+          if let OrCode::Else(ref mut child) = child {
+            if child.parent.is_some() {
+              return Err(Error::new(
+                child.parent.as_ref().unwrap().span(),
+                "Only top level entity can have parent"));
+            }
+
+            child.parent = Some(Ident::new("parent", proc_macro2::Span::call_site()));
           }
 
-          child.parent = Some(Ident::new("parent", proc_macro2::Span::call_site()));
           children.push(child);
         }
 
         return Ok(Extension::Children(children));
       }
 
+      if input.peek(Brace) {
+        return Ok(Extension::CodeBlock(input.parse()?));
+      }
+
       return Ok(Extension::Unfinished(dot, None));
+    }
+  }
+
+  impl Parse for OrCode<Entity> {
+    fn parse(input: ParseStream) -> Result<Self> {
+      if input.peek(Brace) {
+        Ok(OrCode::Code(input.parse()?))
+      } else {
+        Ok(OrCode::Else(input.parse()?))
+      }
     }
   }
 
@@ -277,16 +353,20 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 
     for ext in extensions.drain(..) {
       content.extend(match ext {
-        Extension::Children(entities) => {
+        Extension::Children(children) => {
           let mut result = quote! {};
 
-          for entity in entities {
-            result.extend(convert(entity, false));
+          for child in children {
+            match child {
+              OrCode::Code(code  ) => result.extend(quote! { #code }),
+              OrCode::Else(entity) => result.extend(convert(entity, false)),
+            }
           }
 
           quote! {{ #result }}
         },
 
+        Extension::CodeBlock (block           ) => quote! { { #block } },
         Extension::Unfinished(dot, name       ) => quote! { entity #dot #name },
         Extension::MethodCall(None      , args) => quote! { entity.observe(#(#args),*); },
         Extension::MethodCall(Some(name), args) => quote! { entity. #name (#(#args),*); },
@@ -297,13 +377,16 @@ pub fn spawn(input: TokenStream) -> TokenStream {
     quote! { #naming { #content this }; }
   }
 
-  let Spawn { spawner, entities } =
+  let Spawn { spawner, children } =
     Spawn::parse.parse(input).unwrap();
 
   let mut result = quote! {};
 
-  for entity in entities {
-    result.extend(convert(entity, true));
+  for child in children {
+    match child {
+      OrCode::Code(code  ) => result.extend(quote! { #code }),
+      OrCode::Else(entity) => result.extend(convert(entity, true)),
+    }
   }
 
   quote! {{
