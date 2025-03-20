@@ -122,6 +122,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
     name        : Option<Ident>,
     components  : Vec<Expr>,
     method_calls: Vec<(Option<Ident>, Vec<Expr>)>,
+    unfinished  : Vec<(Token![.], Option<Ident>)>,
     children    : Vec<Entity>,
   }
 
@@ -134,6 +135,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
     fn parse(input: ParseStream) -> Result<Self> {
       let mut children     = vec![];
       let mut method_calls = vec![];
+      let mut unfinished   = vec![];
 
       let parent = if input.peek(Ident) && input.peek2(Token![>]) {
         let parent = Some(input.parse()?);
@@ -159,15 +161,21 @@ pub fn spawn(input: TokenStream) -> TokenStream {
       };
 
       while input.peek(Token![.]) {
-        input.parse::<Token![.]>()?;
+        let dot = input.parse::<Token![.]>()?;
 
         if input.peek(Ident) {
-          let method = input.parse()?;
-          let content;
-          parenthesized!(content in input);
+          let method = input.parse().ok();
 
-          method_calls.push((method, content.parse_terminated(
-            Expr::parse, Token![,])?.into_iter().collect()));
+          if input.peek(Paren) && method.is_some() {
+            let content;
+            parenthesized!(content in input);
+
+            method_calls.push((method, content.parse_terminated(
+              Expr::parse, Token![,])?.into_iter().collect()));
+            continue;
+          }
+
+          unfinished.push((dot, method));
           continue;
         }
 
@@ -188,7 +196,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
           continue;
         }
 
-        return Err(input.error("expected method call or children"));
+        unfinished.push((dot, None));
       }
 
       Ok(Entity {
@@ -196,6 +204,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
         name,
         components,
         method_calls,
+        unfinished,
         children,
       })
     }
@@ -242,6 +251,10 @@ pub fn spawn(input: TokenStream) -> TokenStream {
       quote! { entity.#method(#(#args),*); }
     });
 
+    let unfinished = entity.unfinished.iter().map(|(dot, method)| {
+      quote! { entity #dot #method }
+    });
+
     result.extend(quote! {{
       let mut entity = spawner.spawn((
         #(#components),*
@@ -250,6 +263,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
       let this = entity.id();
 
       #(#method_calls;)*
+      #(#unfinished)*
 
       #children
       #parenting
