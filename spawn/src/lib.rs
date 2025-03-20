@@ -118,16 +118,16 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 
   if input.is_empty() { return TokenStream::new(); }
 
+  struct Spawn {
+    spawner : Ident,
+    entities: Vec<Entity>,
+  }
+
   struct Entity {
     parent    : Option<Ident>,
     name      : Option<Ident>,
     components: Vec<Expr>,
     extensions: Vec<Extension>,
-  }
-
-  struct Spawn {
-    spawner: Ident,
-    entities: Vec<Entity>,
   }
 
   enum Extension {
