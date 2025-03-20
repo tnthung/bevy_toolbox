@@ -2,6 +2,10 @@
 
 A simple crate that provides macros for simplifying some common Bevy tasks.
 
+Table of Contents:
+
+- [spawn!](#spawn)
+
 # `spawn!`
 
 This macro is used to simplify the entity creation of the bevy engine.
