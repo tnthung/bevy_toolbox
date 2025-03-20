@@ -242,22 +242,20 @@ pub fn spawn(input: TokenStream) -> TokenStream {
       quote! { entity.#method(#(#args),*); }
     });
 
-    result.extend(quote! {
-      {
-        let mut entity = spawner.spawn((
-          #(#components),*
-        ));
+    result.extend(quote! {{
+      let mut entity = spawner.spawn((
+        #(#components),*
+      ));
 
-        let this = entity.id();
+      let this = entity.id();
 
-        #(#method_calls;)*
+      #(#method_calls;)*
 
-        #children
-        #parenting
+      #children
+      #parenting
 
-        this
-      };
-    });
+      this
+    };});
 
     result
   }
