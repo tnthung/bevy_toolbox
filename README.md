@@ -1,4 +1,4 @@
-# simple-bevy-spawn
+# bevy-toolbox
 
 A simple crate that provides macros for simplifying some common Bevy tasks.
 
