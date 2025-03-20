@@ -79,7 +79,7 @@ use proc_macro::TokenStream;
 /// spawn! { commands
 ///   (Button, BackgroundColor(Color::srgb(0.0, 0.0, 0.0)))
 ///     .observe(move |_: Trigger<Pointer<Click>>, mut commands: Commands| {
-///        .entity(this).insert(BackgroundColor(Color::srgb(1.0, 1.0, 1.0)));
+///        commands.entity(this).insert(BackgroundColor(Color::srgb(1.0, 1.0, 1.0)));
 ///     });
 /// }
 /// ```
