@@ -4,7 +4,7 @@ version     = "0.1.0"
 edition     = "2021"
 license     = "MIT"
 repository  = "https://github.com/tnthung/bevy_toolbox"
-description = "Spawn macro for bevy_toolbox"
+description = "A collection of useful tools for Bevy game engine"
 
 [lib]
 proc-macro = true
