@@ -241,8 +241,7 @@ use proc_macro::TokenStream;
 /// component   ::= EXPR ;
 /// code_block  ::= EXPR_BLOCK ;
 /// ```
-#[proc_macro]
-pub fn spawn(input: TokenStream) -> TokenStream {
+pub fn spawn_impl(input: TokenStream) -> TokenStream {
   use syn::*;
   use syn::parse::*;
   use syn::token::*;
