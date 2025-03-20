@@ -1,7 +1,6 @@
 [package]
-name    = "simple-bevy-spawn"
+name    = "proc"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-proc = { path = "proc" }
