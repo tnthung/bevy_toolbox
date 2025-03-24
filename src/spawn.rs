@@ -166,8 +166,8 @@ impl Generate for Entity {
 
     for ext in extensions {
       content.extend(match ext {
+        Extension::MethodCall(method   ) => method.generate(),
         Extension::Observe   (arg      ) => quote! { entity.observe(#arg); },
-        Extension::MethodCall(method   ) => method  .generate(),
         Extension::CodeBlock (block    ) => quote! { #block },
         Extension::Unfinished(dot, name) => quote! { entity #dot #name },
       });
@@ -217,8 +217,8 @@ impl Generate for Parented {
 
     for ext in extensions {
       content.extend(match ext {
+        Extension::MethodCall(method   ) => method.generate(),
         Extension::Observe   (arg      ) => quote! { entity.observe(#arg); },
-        Extension::MethodCall(method   ) => method  .generate(),
         Extension::CodeBlock (block    ) => quote! { #block },
         Extension::Unfinished(dot, name) => quote! { entity #dot #name },
       });
@@ -267,8 +267,8 @@ impl Generate for Inserted {
 
     for ext in extensions {
       content.extend(match ext {
+        Extension::MethodCall(method   ) => method.generate(),
         Extension::Observe   (arg      ) => quote! { entity.observe(#arg); },
-        Extension::MethodCall(method   ) => method  .generate(),
         Extension::CodeBlock (block    ) => quote! { #block },
         Extension::Unfinished(dot, name) => quote! { entity #dot #name },
       });
