@@ -114,10 +114,10 @@ mod spawn;
 /// }
 /// ```
 ///
-/// ## Injection
+/// ## Insertion
 ///
-/// Like parenting, injection is also possible for top level entities. Injection is inserting extra
-/// components into an already spawned entity.
+/// Insertion is a way to add some components to an existing entity. The entity must be named and spawned
+/// in advanced in order to be referenced.
 ///
 /// ```rs, no_run
 /// spawn! { commands
@@ -125,6 +125,18 @@ mod spawn;
 ///
 ///   // add a background color to `my_entity`
 ///   my_entity + (BackgroundColor(Color::srgb(0.0, 0.0, 0.0)));
+///
+///   // in the children group, it's also possible to insert components
+///   my_fancy_button (Button).[
+///     txt (Text::new("Hello, World!"));
+///
+///     // add a background color to `txt`
+///     txt + (BackgroundColor(Color::srgb(0.0, 0.0, 0.0)));
+///   ];
+///
+///   // extensions are still available
+///   my_fancy_button + (BackgroundColor(Color::srgb(0.0, 0.0, 0.0)))
+///     .(move |_: Trigger<Pointer<Click>>, mut commands: Commands| { /* ... */ });
 /// }
 /// ```
 ///

@@ -15,7 +15,7 @@ This macro is used to simplify the entity creation of the bevy engine.
 Spawner is the object that have `spawn` method which takes a bevy bundle and returns
 `EntityCommands` as the result.
 
-```rs, no_run
+```rs
 fn foo(mut commands: Commands) {
   // commands can be used as spawner
 }
@@ -29,7 +29,7 @@ fn bar(world: &mut World) {
 
 Top level means the part of the macro thats been directly quoted by the macro itself.
 
-```rs, no_run
+```rs
 spawn! { commands
   // here is the top level
 
@@ -43,7 +43,7 @@ spawn! { commands
 
 An entity definition is a tuple of components that will be spawned as an entity.
 
-```rs, no_run
+```rs
 spawn! { commands
   // entity definition
   (Button, Node::default());
@@ -52,7 +52,7 @@ spawn! { commands
 
 Top level can accept multiple entity definitions.
 
-```rs, no_run
+```rs
 spawn! { commands
   // entity 1
   (Button, Node::default());
@@ -66,7 +66,7 @@ spawn! { commands
 
 The order of any bit in the macro matters. The execution order is strictly follow the macro input.
 
-```rs, no_run
+```rs
 // entity `a` will always being spawned before `b`
 spawn! { commands
   a ();
@@ -79,7 +79,7 @@ spawn! { commands
 An entity can be named for later reference. The variable will hold the `Entity` of the corresponding
 entity, NOT THE `EntityCommands`.
 
-```rs, no_run
+```rs
 spawn! { commands
   entity_1 (Button, Node::default());
   entity_2 (Button, Node::default());
@@ -101,7 +101,7 @@ spawn! { commands
 
 A top level entities can have explicit parent. Parenting is done by using `>` operator.
 
-```rs, no_run
+```rs
 spawn! { commands
   my_entity (Button);
 
@@ -117,12 +117,38 @@ spawn! { commands
 }
 ```
 
+## Insertion
+
+Insertion is a way to add some components to an existing entity. The entity must be named and spawned
+in advanced in order to be referenced.
+
+```rs
+spawn! { commands
+  my_entity (Button);
+
+  // add a background color to `my_entity`
+  my_entity + (BackgroundColor(Color::srgb(0.0, 0.0, 0.0)));
+
+  // in the children group, it's also possible to insert components
+  my_fancy_button (Button).[
+    txt (Text::new("Hello, World!"));
+
+    // add a background color to `txt`
+    txt + (BackgroundColor(Color::srgb(0.0, 0.0, 0.0)));
+  ];
+
+  // extensions are still available
+  my_fancy_button + (BackgroundColor(Color::srgb(0.0, 0.0, 0.0)))
+    .(move |_: Trigger<Pointer<Click>>, mut commands: Commands| { /* ... */ });
+}
+```
+
 ## Code block injection
 
 Since the entities inside the macro is enclosed within a generated scope to prevent the namespace
 pollution, code block injection makes it possible to execute code without leaving the macro.
 
-```rs, no_run
+```rs
 spawn! { commands
   entity_1 (Button);
   entity_2 (Button);
@@ -155,7 +181,7 @@ use `[]` to define a new children group. A children group can have multiple enti
 same group, the entities can reference each other, but entities in 2 different groups under same
 parent can't.
 
-```rs, no_run
+```rs
 spawn! { commands
   (Button)
     .[
@@ -181,7 +207,7 @@ spawn! { commands
 Method call is a call to a method of `EntityCommands`. The auto completion is supported for the
 method name and the arguments.
 
-```rs, no_run
+```rs
 spawn! { commands
   (Button)
     .[(Text::new("Hello, World!"))]
@@ -191,7 +217,7 @@ spawn! { commands
 
 Since `observe` is most likely to be used, a shortcut is provided to omit the method name.
 
-```rs, no_run
+```rs
 spawn! { commands
   (Button)
     .[(Text::new("Hello, World!"))]
@@ -201,7 +227,7 @@ spawn! { commands
 
 To reference the current entity, you can use `this` for `Entity` and `entity` for `EntityCommands`.
 
-```rs, no_run
+```rs
 spawn! { commands
   (Button, BackgroundColor(Color::srgb(0.0, 0.0, 0.0)))
     .[(Text::new("Hello, World!"))]
@@ -216,7 +242,7 @@ spawn! { commands
 Code block is a block of code that will be executed in the context of the entity. As previously
 mentioned, the code block can also access `this` and `entity` variables.
 
-```rs, no_run
+```rs
 spawn! { commands
   (Button)
     .{
