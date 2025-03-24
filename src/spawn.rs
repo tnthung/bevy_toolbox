@@ -71,7 +71,7 @@ impl Generate for Spawn {
       content.extend(e.generate());
     }
 
-    content
+    quote! { { #content }; }
   }
 }
 
