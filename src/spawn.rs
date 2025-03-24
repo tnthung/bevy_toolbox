@@ -5,7 +5,7 @@
 //! ```txt
 //! spawn       ::= spawner top_level<';'>* ;
 //!
-//! definition  ::= '(' component<','>* ')' ('.' extension)* ;
+//! definition  ::= '(' component<','>* ')' ('.' extension)* ('.' children)* ;
 //! entity      ::= name? definition ;
 //!
 //! parented    ::= name '>' entity ;
@@ -14,7 +14,7 @@
 //! child       ::= entity | inserted | code_block ;
 //! top_level   ::= entity | inserted | code_block | parented ;
 //!
-//! extension   ::= observe | children | method_call | code_block ;
+//! extension   ::= observe | method_call | code_block ;
 //! observe     ::= '(' argument ')' ;
 //! children    ::= '[' child<';'>* ']' ;
 //! method_call ::= name '(' argument<','>* ')' ;
@@ -79,6 +79,7 @@ impl Generate for Spawn {
 struct Definition {
   components: Vec<Expr>,
   extensions: Vec<Extension>,
+  children  : Vec<Children>,
 }
 
 impl Parse for Definition {
@@ -96,15 +97,35 @@ impl Parse for Definition {
       let mut extensions = vec![];
 
       while input.peek(Token![.]) {
+        if input.peek2(Bracket) {
+          break;
+        }
+
         extensions.push(input.parse()?);
       }
 
       extensions
     };
 
+    let children = {
+      let mut children = vec![];
+
+      while input.peek(Token![.]) {
+        if !input.peek2(Bracket) {
+          return Err(input.error("Extensions cannot be chained after children group"));
+        }
+
+        input.parse::<Token![.]>()?;
+        children.push(input.parse()?);
+      }
+
+      children
+    };
+
     Ok(Definition {
       components,
       extensions,
+      children,
     })
   }
 }
@@ -133,7 +154,7 @@ impl Parse for Entity {
 impl Generate for Entity {
   fn generate(self) -> proc_macro2::TokenStream {
     let Entity     { name, definition } = self;
-    let Definition { components, extensions } = definition;
+    let Definition { components, extensions, children } = definition;
 
     let mut content = quote! {
       let mut entity = spawner.spawn((
@@ -146,11 +167,14 @@ impl Generate for Entity {
     for ext in extensions {
       content.extend(match ext {
         Extension::Observe   (arg      ) => quote! { entity.observe(#arg); },
-        Extension::Children  (children ) => children.generate(),
         Extension::MethodCall(method   ) => method  .generate(),
         Extension::CodeBlock (block    ) => quote! { #block },
         Extension::Unfinished(dot, name) => quote! { entity #dot #name },
       });
+    }
+
+    for group in children {
+      content.extend(group.generate());
     }
 
     let naming = name.map(|n| quote! { let #n = });
@@ -180,7 +204,7 @@ impl Generate for Parented {
   fn generate(self) -> proc_macro2::TokenStream {
     let Parented   { parent, entity } = self;
     let Entity     { name, definition } = entity;
-    let Definition { components, extensions } = definition;
+    let Definition { components, extensions, children } = definition;
 
     let mut content = quote! {
       let mut entity = spawner.spawn((
@@ -194,11 +218,14 @@ impl Generate for Parented {
     for ext in extensions {
       content.extend(match ext {
         Extension::Observe   (arg      ) => quote! { entity.observe(#arg); },
-        Extension::Children  (children ) => children.generate(),
         Extension::MethodCall(method   ) => method  .generate(),
         Extension::CodeBlock (block    ) => quote! { #block },
         Extension::Unfinished(dot, name) => quote! { entity #dot #name },
       });
+    }
+
+    for group in children {
+      content.extend(group.generate());
     }
 
     let naming = name.map(|n| quote! { let #n = });
@@ -227,7 +254,7 @@ impl Parse for Inserted {
 impl Generate for Inserted {
   fn generate(self) -> proc_macro2::TokenStream {
     let Inserted   { base, entity } = self;
-    let Definition { components, extensions } = entity;
+    let Definition { components, extensions, children } = entity;
 
     let mut content = quote! {
       let mut entity = spawner.entity(#base);
@@ -241,11 +268,14 @@ impl Generate for Inserted {
     for ext in extensions {
       content.extend(match ext {
         Extension::Observe   (arg      ) => quote! { entity.observe(#arg); },
-        Extension::Children  (children ) => children.generate(),
         Extension::MethodCall(method   ) => method  .generate(),
         Extension::CodeBlock (block    ) => quote! { #block },
         Extension::Unfinished(dot, name) => quote! { entity #dot #name },
       });
+    }
+
+    for group in children {
+      content.extend(group.generate());
     }
 
     quote! { { #content }; }
@@ -321,7 +351,6 @@ impl Generate for TopLevel {
 
 enum Extension {
   Observe   (Expr),
-  Children  (Children),
   MethodCall(MethodCall),
   CodeBlock (Group),
 
@@ -348,10 +377,6 @@ impl Parse for Extension {
         parenthesized!(content in input);
         content.parse()?
       }));
-    }
-
-    if input.peek(Bracket) {
-      return Ok(Extension::Children(input.parse()?));
     }
 
     if input.peek(Brace) {
