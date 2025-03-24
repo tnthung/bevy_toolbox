@@ -165,18 +165,72 @@ mod spawn;
 ///
 /// An entity can be extended with any number of:
 ///
-/// 1. Children Group
 /// 1. Method Call
 /// 1. Code Block
 ///
 /// All extensions are started with `.` after the entity definition.
 ///
-/// ### Children Group
+/// ### Method Call
 ///
-/// Children group is a group of entities that will be spawned as children of the parent entity. We
-/// use `[]` to define a new children group. A children group can have multiple entities. Within the
-/// same group, the entities can reference each other, but entities in 2 different groups under same
-/// parent can't.
+/// Method call is a call to a method of `EntityCommands`. The auto completion is supported for the
+/// method name and the arguments.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   (Button)
+///     .observe(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); })
+///     .[(Text::new("Hello, World!"))];
+/// }
+/// ```
+///
+/// Since `observe` is most likely to be used, a shortcut is provided to omit the method name.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   (Button)
+///     .(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); })
+///     .[(Text::new("Hello, World!"))];
+/// }
+/// ```
+///
+/// To reference the current entity, you can use `this` for `Entity` and `entity` for `EntityCommands`.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   (Button, BackgroundColor(Color::srgb(0.0, 0.0, 0.0)))
+///     .(move |_: Trigger<Pointer<Click>>, mut commands: Commands| {
+///       commands.entity(this).insert(BackgroundColor(Color::srgb(1.0, 1.0, 1.0)));
+///     })
+///     .[(Text::new("Hello, World!"))];
+/// }
+/// ```
+///
+/// ### Code Block
+///
+/// Code block is a block of code that will be executed in the context of the entity. As previously
+/// mentioned, the code block can also access `this` and `entity` variables.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   (Button)
+///     .{
+///       // print the entity id of the current entity
+///       println!("{this:?}");
+///
+///       // manually adding a child
+///       entity.with_child((Text::new("Hello, World!")));
+///     };
+/// }
+/// ```
+///
+/// ## Children Group
+///
+/// Children group is a group of entities quoted by `[]` after the `.`. The entities in the group will
+/// be spawned as children of the parent entity. One entity can have multiple children groups, but all
+/// of them have to be after the extensions. This is because the `spawner` ownership will be temporarily
+/// taken for method calls and code blocks, to prevent this from happening, the children group is forced
+/// to be the last part of the entity definition. Within the same group, the entities can reference
+/// each other, but entities in 2 different groups under same parent can't.
 ///
 /// ```rs, no_run
 /// spawn! { commands
@@ -197,58 +251,6 @@ mod spawn;
 ///         // you can't access `a`, `b`, but `c`
 ///       };
 ///     ];
-/// ```
-///
-/// ### Method Call
-///
-/// Method call is a call to a method of `EntityCommands`. The auto completion is supported for the
-/// method name and the arguments.
-///
-/// ```rs, no_run
-/// spawn! { commands
-///   (Button)
-///     .[(Text::new("Hello, World!"))]
-///     .observe(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); });
-/// }
-/// ```
-///
-/// Since `observe` is most likely to be used, a shortcut is provided to omit the method name.
-///
-/// ```rs, no_run
-/// spawn! { commands
-///   (Button)
-///     .[(Text::new("Hello, World!"))]
-///     .(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); });
-/// }
-/// ```
-///
-/// To reference the current entity, you can use `this` for `Entity` and `entity` for `EntityCommands`.
-///
-/// ```rs, no_run
-/// spawn! { commands
-///   (Button, BackgroundColor(Color::srgb(0.0, 0.0, 0.0)))
-///     .[(Text::new("Hello, World!"))]
-///     .(move |_: Trigger<Pointer<Click>>, mut commands: Commands| {
-///       commands.entity(this).insert(BackgroundColor(Color::srgb(1.0, 1.0, 1.0)));
-///     });
-/// }
-/// ```
-///
-/// ### Code Block
-///
-/// Code block is a block of code that will be executed in the context of the entity. As previously
-/// mentioned, the code block can also access `this` and `entity` variables.
-///
-/// ```rs, no_run
-/// spawn! { commands
-///   (Button)
-///     .{
-///       // print the entity id of the current entity
-///       println!("{this:?}");
-///
-///       // manually adding a child
-///       entity.with_child((Text::new("Hello, World!")));
-///     };
 /// }
 /// ```
 ///

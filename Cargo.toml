@@ -1,6 +1,6 @@
 [package]
 name        = "bevy_toolbox"
-version     = "0.1.0"
+version     = "0.1.1"
 edition     = "2021"
 license     = "MIT"
 repository  = "https://github.com/tnthung/bevy_toolbox"
@@ -13,3 +13,10 @@ proc-macro = true
 syn         = { version = "2.0.100", features = ["full"] }
 quote       = "1.0.40"
 proc-macro2 = "1.0.94"
+
+[dev-dependencies]
+bevy = "0.15.3"
+
+[[example]]
+name = "simple_button"
+path = "examples/simple_button.rs"
