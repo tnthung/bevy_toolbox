@@ -28,6 +28,8 @@
 
 use crate::Generate;
 use proc_macro::TokenStream;
+use proc_macro2::Group;
+use proc_macro2::Span;
 use syn::*;
 use syn::parse::*;
 use syn::token::*;
@@ -254,7 +256,7 @@ impl Generate for Inserted {
 enum Child {
   Entity   (Entity),
   Inserted (Inserted),
-  CodeBlock(proc_macro2::Group),
+  CodeBlock(Group),
 }
 
 impl Parse for Child {
@@ -280,7 +282,7 @@ enum TopLevel {
   Entity   (Entity),
   Parented (Parented),
   Inserted (Inserted),
-  CodeBlock(proc_macro2::Group),
+  CodeBlock(Group),
 }
 
 impl Parse for TopLevel {
@@ -321,7 +323,7 @@ enum Extension {
   Observe   (Expr),
   Children  (Children),
   MethodCall(MethodCall),
-  CodeBlock (proc_macro2::Group),
+  CodeBlock (Group),
 
   /// Unfinished is not a valid part of the grammar, it is used to allow the text editor correctly
   /// shows the autocomplete suggestions.
@@ -385,7 +387,7 @@ impl Generate for Children {
         Child::CodeBlock(block   ) => quote! { #block },
         Child::Inserted (inserted) => inserted.generate(),
         Child::Entity   (entity  ) => {
-          let parent = Ident::new("parent", proc_macro2::Span::call_site());
+          let parent = Ident::new("parent", Span::call_site());
           Parented { parent, entity }.generate()
         },
       });
