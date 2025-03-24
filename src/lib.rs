@@ -114,6 +114,20 @@ mod spawn;
 /// }
 /// ```
 ///
+/// ## Injection
+///
+/// Like parenting, injection is also possible for top level entities. Injection is inserting extra
+/// components into an already spawned entity.
+///
+/// ```rs, no_run
+/// spawn! { commands
+///   my_entity (Button);
+///
+///   // add a background color to `my_entity`
+///   my_entity + (BackgroundColor(Color::srgb(0.0, 0.0, 0.0)));
+/// }
+/// ```
+///
 /// ## Code block injection
 ///
 /// Since the entities inside the macro is enclosed within a generated scope to prevent the namespace
@@ -231,19 +245,34 @@ mod spawn;
 /// * `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
 ///
 /// ```txt
-/// spawn       ::= spawner (parenting? entity | code_block)<';'>* ;
-/// entity      ::= name? '(' component<','> ')' extension* ;
-/// extension   ::= '.' (children | method_call | observe | code_block) ;
-/// method_call ::= name '(' EXPR<','>* ')' ;
-/// observe     ::= '(' EXPR_CLOSURE ')' ;
-/// children    ::= '[' (entity | code_block)<';'>* ']' ;
-/// parenting   ::= name '>' ;
-/// method_call ::= '.' name '(' EXPR<','>* ')' ;
+/// spawn       ::= spawner top_level<';'>* ;
+///
+/// definition  ::= '(' component<','>* ')' ('.' extension)* ;
+/// entity      ::= name? definition ;
+///
+/// parented    ::= name '>' entity ;
+/// inserted    ::= name '+' definition ;
+///
+/// child       ::= entity | inserted | code_block ;
+/// top_level   ::= entity | inserted | code_block | parented ;
+///
+/// extension   ::= observe | children | method_call | code_block ;
+/// observe     ::= '(' argument ')' ;
+/// children    ::= '[' child<';'>* ']' ;
+/// method_call ::= name '(' argument<','>* ')' ;
+///
 /// name        ::= IDENT ;
+/// spawner     ::= IDENT ;
+/// argument    ::= EXPR ;
 /// component   ::= EXPR ;
 /// code_block  ::= EXPR_BLOCK ;
 /// ```
 #[proc_macro]
 pub fn spawn(input: TokenStream) -> TokenStream {
   crate::spawn::spawn_impl(input)
+}
+
+
+trait Generate {
+  fn generate(self) -> proc_macro2::TokenStream;
 }
