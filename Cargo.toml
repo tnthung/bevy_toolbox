@@ -1,6 +1,15 @@
 [package]
-name    = "simple-bevy-spawn"
-version = "0.1.0"
-edition = "2021"
+name        = "bevy_toolbox"
+version     = "0.1.0"
+edition     = "2021"
+license     = "MIT"
+repository  = "https://github.com/tnthung/bevy_toolbox"
+description = "A collection of useful tools for Bevy game engine"
+
+[lib]
+proc-macro = true
 
 [dependencies]
+syn         = { version = "2.0.100", features = ["full"] }
+quote       = "1.0.40"
+proc-macro2 = "1.0.94"
