@@ -1,6 +1,12 @@
-use proc_macro::TokenStream;
-
 mod spawn;
+
+use proc_macro::TokenStream;
+use proc_macro2::Group;
+use proc_macro2::Span;
+use syn::*;
+use syn::parse::*;
+use syn::token::*;
+use quote::*;
 
 
 /// This macro is used to simplify the entity creation of the bevy engine.
