@@ -1,4 +1,5 @@
 mod spawn;
+mod style;
 
 use proc_macro::TokenStream;
 use proc_macro2::Group;
@@ -290,6 +291,13 @@ use quote::*;
 #[proc_macro]
 pub fn spawn(input: TokenStream) -> TokenStream {
   crate::spawn::spawn_impl(input)
+}
+
+
+
+#[proc_macro]
+pub fn style(input: TokenStream) -> TokenStream {
+  crate::style::style_impl(input)
 }
 
 
