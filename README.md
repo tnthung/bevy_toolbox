@@ -5,6 +5,8 @@ A simple crate that provides macros for simplifying some common Bevy tasks.
 Table of Contents:
 
 - [spawn!](#spawn)
+- [v!](#v)
+- [c!](#c)
 
 # `spawn!`
 
@@ -255,4 +257,86 @@ spawn! { commands
       };
     ];
 }
+```
+
+
+# `v!`
+
+This macro is used to simplify the creation of the bevy's `Val` enum.
+
+## Syntax
+
+There are 7 variants of the `Val` enum, so 7 corresponding syntaxes are provided.
+
+* `+` in between tokens means there can be no space between them.
+
+1. `Val::Auto`    - `auto`
+1. `Val::Percent` - `number '%'` *space is optional* (e.g. `10%`)
+1. `Val::Px`      - `number + 'px'` (e.g. `10px`)
+1. `Val::Vw`      - `number + 'vw'` (e.g. `10vw`)
+1. `Val::Vh`      - `number + 'vh'` (e.g. `10vh`)
+1. `Val::Vmin`    - `number + 'vmin'` (e.g. `10vmin`)
+1. `Val::Vmax`    - `number + 'vmax'` (e.g. `10vmax`)
+
+```rs
+v!(auto);
+v!(10%);
+v!(10px);
+v!(10 vw); // space not allowed, error will be thrown
+```
+
+
+# `c!`
+
+This macro is used to simplify the creation of the bevy's `Color` enum. The syntax is mimicking
+the CSS color syntax. The macro fully supports the auto completion for the color names and the
+color spaces.
+
+# Syntax
+
+## Hex
+
+Hex colors are color codes that starts with `#` followed by 3, 4, 6, or 8 hex characters. The digits
+are not case sensitive, so `#fff` is equivalent to `#FFF`.
+
+* 3 hex digits - `#rgb`       (equivalent to `#rrggbb`)
+* 4 hex digits - `#rgba`      (equivalent to `#rrggbbaa`)
+* 6 hex digits - `#rrggbb`
+* 8 hex digits - `#rrggbbaa`
+
+```rs
+c!(#fff);
+c!(#62a7ff);
+```
+
+## Functional Notation
+
+All functional notations can have 3 or 4 arguments. The 4th argument is the alpha channel, if not
+provided, it will be set to `1.0`.
+
+* `srgb`   - Standard RGB color space
+* `linear` - Linear RGB color space
+* `hsl`    - Hue, Saturation, Lightness
+* `hsv`    - Hue, Saturation, Value
+* `hwb`    - Hue, Whiteness, Blackness
+* `lab`    - L\*a\*b\* color space
+* `lch`    - Luminance, Chroma, Hue
+* `oklab`  - Oklab color space
+* `oklch`  - Oklch color space
+* `xyz`    - CIE 1931 XYZ color space
+
+With the function selected, follow it with the arguments in the parentheses.
+
+```rs
+c!(srgb(1.0, 0.5, 0.5));
+c!(linear(1.0, 0.5, 0.5));
+```
+
+## CSS Named Colors
+
+There are 149 named colors in CSS. The auto completion is supported for all of them.
+
+```rs
+c!(firebrick);
+c!(darkolivegreen);
 ```
