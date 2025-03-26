@@ -321,6 +321,8 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 /// # Grammar
 ///
 /// ```txt
+/// v ::= val;
+///
 /// val ::=
 ///   | 'auto'
 ///   | number '%'
@@ -348,7 +350,8 @@ pub fn v(input: TokenStream) -> TokenStream {
 /// ## Hex
 ///
 /// Hex colors are color codes that starts with `#` followed by 3, 4, 6, or 8 hex characters. The digits
-/// are not case sensitive, so `#fff` is equivalent to `#FFF`.
+/// are not case sensitive, so `#fff` is equivalent to `#FFF`. The color will be converted to `srgb`
+/// color space.
 ///
 /// * 3 hex digits - `#rgb`       (equivalent to `#rrggbb`)
 /// * 4 hex digits - `#rgba`      (equivalent to `#rrggbbaa`)
@@ -385,16 +388,29 @@ pub fn v(input: TokenStream) -> TokenStream {
 ///
 /// ## CSS Named Colors
 ///
-/// There are 149 named colors in CSS. The auto completion is supported for all of them.
+/// There are 149 named colors in CSS. The auto completion is supported for all of them. The color will
+/// be converted to `srgb` color space.
 ///
 /// ```rs, no_run
 /// c!(firebrick);
 /// c!(darkolivegreen);
 /// ```
 ///
+/// ## No wrap
+///
+/// The `c!` macro by default will wrap the color with `Color` enum, but sometimes you might just want
+/// the inner value that color represents. To do this, simply adding `!` before the color.
+///
+/// ```rs, no_run
+/// c!( #fff); // Color::Srgba(Srgba::new(1.0, 1.0, 1.0, 1.0))
+/// c!(!#000); //              Srgba::new(0.0, 0.0, 0.0, 1.0)
+/// ```
+///
 /// # Grammar
 ///
 /// ```txt
+/// c ::= '!'? color;
+///
 /// color ::=
 ///   | '#' + hex{3}    // #rgb
 ///   | '#' + hex{4}    // #rgba
