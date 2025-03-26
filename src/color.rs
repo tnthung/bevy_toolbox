@@ -3,17 +3,6 @@
 //! * `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
 //!
 //! ```txt
-//!
-//! val ::=
-//!   | 'auto'
-//!   | number + '%'
-//!   | number + 'px'
-//!   | number + 'vw'
-//!   | number + 'vh'
-//!   | number + 'vmin'
-//!   | number + 'vmax'
-//!   ;
-//!
 //! color ::=
 //!   | '#' + hex{3}    // #rgb
 //!   | '#' + hex{4}    // #rgba
@@ -39,13 +28,13 @@
 use crate::*;
 
 
-pub fn style_impl(input: TokenStream) -> TokenStream {
+pub fn color_impl(input: TokenStream) -> TokenStream {
   if input.is_empty() { return TokenStream::new(); }
   Color::parse.parse(input).unwrap().generate().into()
 }
 
 
-enum Color {
+pub enum Color {
   Srgba     (Span, (f32, f32, f32, f32)),
   LinearRgba(Span, (f32, f32, f32, f32)),
   Hsla      (Span, (f32, f32, f32, f32)),
@@ -588,78 +577,5 @@ impl Generate for Color {
       use bevy::color::*;
       Color::#kind(#value)
     }}
-  }
-}
-
-
-enum Val {
-  Auto   (Span),
-  Px     (Span, f32),
-  Vw     (Span, f32),
-  Vh     (Span, f32),
-  VMin   (Span, f32),
-  VMax   (Span, f32),
-  Percent(Span, Span, f32),
-}
-
-impl Parse for Val {
-  fn parse(input: ParseStream) -> Result<Self> {
-    if input.peek(Ident) {
-      let ident: Ident = input.parse()?;
-      return match ident.to_string().as_str() {
-        "auto" => Ok(Val::Auto(ident.span())),
-        _ => Err(Error::new(ident.span(), "invalid value")),
-      };
-    }
-
-    let (span, value, unit) = if input.peek(LitFloat) {
-      let token = input.parse::<LitFloat>()?;
-      let value = token.base10_parse::<f32>()?;
-      let unit  = token.suffix().to_string();
-      (token.span(), value, unit)
-    } else if input.peek(LitInt) {
-      let token = input.parse::<LitInt>()?;
-      let value = token.base10_parse::<f32>()?;
-      let unit  = token.suffix().to_string();
-      (token.span(), value, unit)
-    } else {
-      return Err(input.error("expected float or int"));
-    };
-
-    if unit == "" && input.peek(Token![%]) {
-      let sym = input.parse::<Token![%]>()?;
-      return Ok(Val::Percent(span, sym.span, value));
-    }
-
-    match unit.as_str() {
-      "px"   => Ok(Val::Px  (span, value)),
-      "vw"   => Ok(Val::Vw  (span, value)),
-      "vh"   => Ok(Val::Vh  (span, value)),
-      "vmin" => Ok(Val::VMin(span, value)),
-      "vmax" => Ok(Val::VMax(span, value)),
-      _ => Err(Error::new(span, "invalid unit")),
-    }
-  }
-}
-
-impl Generate for Val {
-  fn generate(self) -> proc_macro2::TokenStream {
-    let (value, unit) = match self {
-      Val::Auto(span     ) => (None     , Ident::new("Auto", span)),
-      Val::Px  (span, val) => (Some(val), Ident::new("Px"  , span)),
-      Val::Vw  (span, val) => (Some(val), Ident::new("Vw"  , span)),
-      Val::Vh  (span, val) => (Some(val), Ident::new("Vh"  , span)),
-      Val::VMin(span, val) => (Some(val), Ident::new("VMin", span)),
-      Val::VMax(span, val) => (Some(val), Ident::new("VMax", span)),
-
-      // special case
-      Val::Percent(span1, span2, val) => {
-        let i1 = Ident::new("Percent", span1);
-        let i2 = Ident::new("Percent", span2);
-        return quote! {{ bevy::ui::Val::#i1; bevy::ui::Val::#i2(#val) }};
-      },
-    };
-
-    quote! { bevy::ui::Val::#unit(#value) }
   }
 }

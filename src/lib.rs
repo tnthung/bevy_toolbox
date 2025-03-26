@@ -1,5 +1,6 @@
 mod spawn;
-mod style;
+mod value;
+mod color;
 
 use proc_macro::TokenStream;
 use proc_macro2::Group;
@@ -294,10 +295,131 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 }
 
 
-
+/// This macro is used to simplify the creation of the bevy's `Val` enum.
+///
+/// # Syntax
+///
+/// There are 7 variants of the `Val` enum, so 7 corresponding syntaxes are provided.
+///
+/// * `+` in between tokens means there can be no space between them.
+///
+/// 1. `Val::Auto`    - `auto`
+/// 1. `Val::Percent` - `number '%'` *space is optional* (e.g. `10%`)
+/// 1. `Val::Px`      - `number + 'px'` (e.g. `10px`)
+/// 1. `Val::Vw`      - `number + 'vw'` (e.g. `10vw`)
+/// 1. `Val::Vh`      - `number + 'vh'` (e.g. `10vh`)
+/// 1. `Val::Vmin`    - `number + 'vmin'` (e.g. `10vmin`)
+/// 1. `Val::Vmax`    - `number + 'vmax'` (e.g. `10vmax`)
+///
+/// ```rs, no_run
+/// v!(auto);
+/// v!(10%);
+/// v!(10px);
+/// v!(10 vw); // space not allowed, error will be thrown
+/// ```
+///
+/// # Grammar
+///
+/// ```txt
+/// val ::=
+///   | 'auto'
+///   | number '%'
+///   | number + 'px'
+///   | number + 'vw'
+///   | number + 'vh'
+///   | number + 'vmin'
+///   | number + 'vmax'
+///   ;
+///
+/// number ::= INT | FLOAT ;
+/// ```
 #[proc_macro]
-pub fn style(input: TokenStream) -> TokenStream {
-  crate::style::style_impl(input)
+pub fn v(input: TokenStream) -> TokenStream {
+  crate::value::value_impl(input)
+}
+
+
+/// This macro is used to simplify the creation of the bevy's `Color` enum. The syntax is mimicking
+/// the CSS color syntax. The macro fully supports the auto completion for the color names and the
+/// color spaces.
+///
+/// # Syntax
+///
+/// ## Hex
+///
+/// Hex colors are color codes that starts with `#` followed by 3, 4, 6, or 8 hex characters. The digits
+/// are not case sensitive, so `#fff` is equivalent to `#FFF`.
+///
+/// * 3 hex digits - `#rgb`       (equivalent to `#rrggbb`)
+/// * 4 hex digits - `#rgba`      (equivalent to `#rrggbbaa`)
+/// * 6 hex digits - `#rrggbb`
+/// * 8 hex digits - `#rrggbbaa`
+///
+/// ```rs, no_run
+/// c!(#fff);
+/// c!(#62a7ff);
+/// ```
+///
+/// ## Functional Notation
+///
+/// All functional notations can have 3 or 4 arguments. The 4th argument is the alpha channel, if not
+/// provided, it will be set to `1.0`.
+///
+/// * `srgb`   - Standard RGB color space
+/// * `linear` - Linear RGB color space
+/// * `hsl`    - Hue, Saturation, Lightness
+/// * `hsv`    - Hue, Saturation, Value
+/// * `hwb`    - Hue, Whiteness, Blackness
+/// * `lab`    - L\*a\*b\* color space
+/// * `lch`    - Luminance, Chroma, Hue
+/// * `oklab`  - Oklab color space
+/// * `oklch`  - Oklch color space
+/// * `xyz`    - CIE 1931 XYZ color space
+///
+/// With the function selected, follow it with the arguments in the parentheses.
+///
+/// ```rs, no_run
+/// c!(srgb(1.0, 0.5, 0.5));
+/// c!(linear(1.0, 0.5, 0.5));
+/// ```
+///
+/// ## CSS Named Colors
+///
+/// There are 149 named colors in CSS. The auto completion is supported for all of them.
+///
+/// ```rs, no_run
+/// c!(firebrick);
+/// c!(darkolivegreen);
+/// ```
+///
+/// # Grammar
+///
+/// ```txt
+/// color ::=
+///   | '#' + hex{3}    // #rgb
+///   | '#' + hex{4}    // #rgba
+///   | '#' + hex{6}    // #rrggbb
+///   | '#' + hex{8}    // #rrggbbaa
+///   | 'srgb'   '(' number<','>{3, 4} ')'
+///   | 'linear' '(' number<','>{3, 4} ')'
+///   | 'hsl'    '(' number<','>{3, 4} ')'
+///   | 'hsv'    '(' number<','>{3, 4} ')'
+///   | 'hwb'    '(' number<','>{3, 4} ')'
+///   | 'lab'    '(' number<','>{3, 4} ')'
+///   | 'lch'    '(' number<','>{3, 4} ')'
+///   | 'oklab'  '(' number<','>{3, 4} ')'
+///   | 'oklch'  '(' number<','>{3, 4} ')'
+///   | 'xyz'    '(' number<','>{3, 4} ')'
+///   // too many to list here
+///   | <<<149 CSS named colors>>>
+///   ;
+///
+/// hex    ::= '0'..'9' | 'a'..'f' | 'A'..'F' ;
+/// number ::= INT | FLOAT ;
+/// ```
+#[proc_macro]
+pub fn c(input: TokenStream) -> TokenStream {
+  crate::color::color_impl(input)
 }
 
 
