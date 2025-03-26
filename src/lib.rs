@@ -341,11 +341,12 @@ pub fn v(input: TokenStream) -> TokenStream {
 }
 
 
-/// This macro is used to simplify the creation of the bevy's `Color` enum. The syntax is mimicking
-/// the CSS color syntax. The macro fully supports the auto completion for the color names and the
-/// color spaces.
+/// This macro is used to simplify the creation of the bevy's `Color` enum.
 ///
 /// # Syntax
+///
+/// The syntax is mimicking the CSS color syntax. The macro fully supports the auto completion for the
+/// color names and the color spaces.
 ///
 /// ## Hex
 ///
