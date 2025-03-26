@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_toolbox::spawn;
+use bevy_toolbox::*;
 
 
 fn main() {
@@ -27,16 +27,16 @@ fn setup(mut commands: Commands) {
     container > simple_button (
       Button,
       BorderRadius::all(Val::Px(5.0)),
-      BackgroundColor(srgb("0477BF")),
+      BackgroundColor(c!(#0477BF)),
       Node { padding: UiRect::all(Val::Px(10.0)), ..Default::default() },
     )
       // Add a click event to the button
       .(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); })
       // Some fancy button styling
-      .(change_background_color::<Pointer<Over>>("#049DD9"))
-      .(change_background_color::<Pointer<Out >>("#0477BF"))
-      .(change_background_color::<Pointer<Down>>("#04B2D9"))
-      .(change_background_color::<Pointer<Up  >>("#049DD9"))
+      .(change_background_color::<Pointer<Over>>(c!(#049DD9)))
+      .(change_background_color::<Pointer<Out >>(c!(#0477BF)))
+      .(change_background_color::<Pointer<Down>>(c!(#04B2D9)))
+      .(change_background_color::<Pointer<Up  >>(c!(#049DD9)))
       // Add a text to the button
       .[(Text::new("Click me!"))];
 
@@ -47,11 +47,6 @@ fn setup(mut commands: Commands) {
 }
 
 
-fn srgb(color: &'static str) -> Color {
-  Color::Srgba(Srgba::hex(color).unwrap())
-}
-
-
-fn change_background_color<E: Event>(color: &'static str) -> impl FnMut(Trigger<E>, Commands) {
-  move |t, mut cmds| { cmds.entity(t.entity()).insert(BackgroundColor(srgb(color))); }
+fn change_background_color<E: Event>(color: Color) -> impl FnMut(Trigger<E>, Commands) {
+  move |t, mut cmds| { cmds.entity(t.entity()).insert(BackgroundColor(color)); }
 }
