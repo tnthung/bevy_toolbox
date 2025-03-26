@@ -321,6 +321,8 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 /// # Grammar
 ///
 /// ```txt
+/// v ::= val;
+///
 /// val ::=
 ///   | 'auto'
 ///   | number '%'
@@ -395,6 +397,8 @@ pub fn v(input: TokenStream) -> TokenStream {
 /// # Grammar
 ///
 /// ```txt
+/// c ::= color;
+///
 /// color ::=
 ///   | '#' + hex{3}    // #rgb
 ///   | '#' + hex{4}    // #rgba

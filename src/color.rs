@@ -3,6 +3,8 @@
 //! * `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
 //!
 //! ```txt
+//! c ::= color;
+//!
 //! color ::=
 //!   | '#' + hex{3}    // #rgb
 //!   | '#' + hex{4}    // #rgba
