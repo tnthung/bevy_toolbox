@@ -292,12 +292,13 @@ This macro is used to simplify the creation of the bevy's `Color` enum. The synt
 the CSS color syntax. The macro fully supports the auto completion for the color names and the
 color spaces.
 
-# Syntax
+## Syntax
 
-## Hex
+### Hex
 
 Hex colors are color codes that starts with `#` followed by 3, 4, 6, or 8 hex characters. The digits
-are not case sensitive, so `#fff` is equivalent to `#FFF`.
+are not case sensitive, so `#fff` is equivalent to `#FFF`. The color will be converted to `srgb`
+color space.
 
 * 3 hex digits - `#rgb`       (equivalent to `#rrggbb`)
 * 4 hex digits - `#rgba`      (equivalent to `#rrggbbaa`)
@@ -309,7 +310,7 @@ c!(#fff);
 c!(#62a7ff);
 ```
 
-## Functional Notation
+### Functional Notation
 
 All functional notations can have 3 or 4 arguments. The 4th argument is the alpha channel, if not
 provided, it will be set to `1.0`.
@@ -332,11 +333,22 @@ c!(srgb(1.0, 0.5, 0.5));
 c!(linear(1.0, 0.5, 0.5));
 ```
 
-## CSS Named Colors
+### CSS Named Colors
 
-There are 149 named colors in CSS. The auto completion is supported for all of them.
+There are 149 named colors in CSS. The auto completion is supported for all of them. The color will
+be converted to `srgb` color space.
 
 ```rs
 c!(firebrick);
 c!(darkolivegreen);
+```
+
+### No wrap
+
+The `c!` macro by default will wrap the color with `Color` enum, but sometimes you might just want
+the inner value that color represents. To do this, simply adding `!` before the color.
+
+```rs, no_run
+c!( #fff); // Color::Srgba(Srgba::new(1.0, 1.0, 1.0, 1.0))
+c!(!#000); //              Srgba::new(0.0, 0.0, 0.0, 1.0)
 ```
