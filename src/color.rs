@@ -30,12 +30,6 @@
 use crate::*;
 
 
-pub fn color_impl(input: TokenStream) -> TokenStream {
-  if input.is_empty() { return TokenStream::new(); }
-  Color::parse.parse(input).unwrap().generate().into()
-}
-
-
 pub enum Color {
   Srgba     (Span, bool, (f32, f32, f32, f32)),
   LinearRgba(Span, bool, (f32, f32, f32, f32)),

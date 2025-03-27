@@ -20,12 +20,6 @@
 use crate::*;
 
 
-pub fn value_impl(input: TokenStream) -> TokenStream {
-  if input.is_empty() { return TokenStream::new(); }
-  Value::parse.parse(input).unwrap().generate().into()
-}
-
-
 pub enum Value {
   Auto   (Span),
   Px     (Span, f32),

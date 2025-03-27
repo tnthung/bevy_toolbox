@@ -291,7 +291,7 @@ use quote::*;
 /// ```
 #[proc_macro]
 pub fn spawn(input: TokenStream) -> TokenStream {
-  crate::spawn::spawn_impl(input)
+  apply::<crate::spawn::Spawn>(input, true)
 }
 
 
@@ -337,7 +337,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn v(input: TokenStream) -> TokenStream {
-  crate::value::value_impl(input)
+  apply::<crate::value::Value>(input, false)
 }
 
 
@@ -436,10 +436,29 @@ pub fn v(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn c(input: TokenStream) -> TokenStream {
-  crate::color::color_impl(input)
+  apply::<crate::color::Color>(input, false)
 }
 
 
 trait Generate {
   fn generate(self) -> proc_macro2::TokenStream;
+}
+
+
+fn apply<P: Parse+Generate>(input: TokenStream, allow_empty: bool) -> TokenStream {
+  if input.is_empty() {
+    if allow_empty {
+      return TokenStream::new();
+    }
+
+    return Error::new(
+      Span::call_site(),
+      "This macro can't be called without any input",
+    ).to_compile_error().into();
+  }
+
+  match P::parse.parse(input) {
+    Ok(value) => value.generate(),
+    Err(err) => err.to_compile_error(),
+  }.into()
 }
