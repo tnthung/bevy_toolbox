@@ -443,7 +443,7 @@ pub fn c(input: TokenStream) -> TokenStream {
 
 
 trait Generate {
-  fn generate(self) -> proc_macro2::TokenStream;
+  fn generate(&self) -> proc_macro2::TokenStream;
 }
 
 
