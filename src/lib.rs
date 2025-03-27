@@ -303,7 +303,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 ///
 /// * `+` in between tokens means there can be no space between them.
 ///
-/// 1. `Val::Auto`    - `auto`
+/// 1. `Val::Auto`    - `auto`, `@`
 /// 1. `Val::Percent` - `number '%'` *space is optional* (e.g. `10%`)
 /// 1. `Val::Px`      - `number + 'px'` (e.g. `10px`)
 /// 1. `Val::Vw`      - `number + 'vw'` (e.g. `10vw`)
@@ -313,6 +313,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 ///
 /// ```rs, no_run
 /// v!(auto);
+/// v!(@);
 /// v!(10%);
 /// v!(10px);
 /// v!(10 vw); // space not allowed, error will be thrown
@@ -325,6 +326,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 ///
 /// val ::=
 ///   | 'auto'
+///   | '@'
 ///   | number '%'
 ///   | number + 'px'
 ///   | number + 'vw'

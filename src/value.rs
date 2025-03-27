@@ -7,6 +7,7 @@
 //!
 //! val ::=
 //!   | 'auto'
+//!   | '@'
 //!   | number '%'
 //!   | number + 'px'
 //!   | number + 'vw'
@@ -38,6 +39,11 @@ impl Parse for Value {
         "auto" => Ok(Value::Auto(ident.span())),
         _ => Err(Error::new(ident.span(), "invalid value")),
       };
+    }
+
+    if input.peek(Token![@]) {
+      let sym = input.parse::<Token![@]>()?;
+      return Ok(Value::Auto(sym.span));
     }
 
     let (span, value, unit) = if input.peek(LitFloat) {
@@ -73,12 +79,12 @@ impl Parse for Value {
 impl Generate for Value {
   fn generate(self) -> proc_macro2::TokenStream {
     let (value, unit) = match self {
-      Value::Auto(span     ) => (None     , Ident::new("Auto", span)),
-      Value::Px  (span, val) => (Some(val), Ident::new("Px"  , span)),
-      Value::Vw  (span, val) => (Some(val), Ident::new("Vw"  , span)),
-      Value::Vh  (span, val) => (Some(val), Ident::new("Vh"  , span)),
-      Value::VMin(span, val) => (Some(val), Ident::new("VMin", span)),
-      Value::VMax(span, val) => (Some(val), Ident::new("VMax", span)),
+      Value::Auto(span     ) => (None                 , Ident::new("Auto", span)),
+      Value::Px  (span, val) => (Some(quote! {(#val)}), Ident::new("Px"  , span)),
+      Value::Vw  (span, val) => (Some(quote! {(#val)}), Ident::new("Vw"  , span)),
+      Value::Vh  (span, val) => (Some(quote! {(#val)}), Ident::new("Vh"  , span)),
+      Value::VMin(span, val) => (Some(quote! {(#val)}), Ident::new("VMin", span)),
+      Value::VMax(span, val) => (Some(quote! {(#val)}), Ident::new("VMax", span)),
 
       // special case
       Value::Percent(span1, span2, val) => {
@@ -88,6 +94,6 @@ impl Generate for Value {
       },
     };
 
-    quote! { bevy::ui::Val::#unit(#value) }
+    quote! { bevy::ui::Val::#unit #value }
   }
 }

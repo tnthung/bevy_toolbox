@@ -270,7 +270,7 @@ There are 7 variants of the `Val` enum, so 7 corresponding syntaxes are provided
 
 * `+` in between tokens means there can be no space between them.
 
-1. `Val::Auto`    - `auto`
+1. `Val::Auto`    - `auto`, `@`
 1. `Val::Percent` - `number '%'` *space is optional* (e.g. `10%`)
 1. `Val::Px`      - `number + 'px'` (e.g. `10px`)
 1. `Val::Vw`      - `number + 'vw'` (e.g. `10vw`)
@@ -280,6 +280,7 @@ There are 7 variants of the `Val` enum, so 7 corresponding syntaxes are provided
 
 ```rs
 v!(auto);
+v!(@);
 v!(10%);
 v!(10px);
 v!(10 vw); // space not allowed, error will be thrown
