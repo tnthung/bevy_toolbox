@@ -41,6 +41,7 @@ pub enum Color {
   Oklaba    (Span, bool, (f32, f32, f32, f32)),
   Oklcha    (Span, bool, (f32, f32, f32, f32)),
   Xyza      (Span, bool, (f32, f32, f32, f32)),
+  Hex       (Span, Span, bool, (f32, f32, f32, f32)),
   Css       (Span, bool, &'static str, (f32, f32, f32, f32)),
   Unfinished(Option<Ident>),
 }
@@ -86,7 +87,7 @@ impl Parse for Color {
 
         let mut chars = hex.chars();
 
-        return Ok(Color::Srgba(hash.span, no_wrap, (
+        return Ok(Color::Hex(span, hash.span, no_wrap, (
           hex_to_f32(chars.next().unwrap()),
           hex_to_f32(chars.next().unwrap()),
           hex_to_f32(chars.next().unwrap()),
@@ -96,7 +97,7 @@ impl Parse for Color {
       // full hex parsing
       fn hex_to_f32(hex: &str) -> f32 { u8::from_str_radix(hex, 16).unwrap() as f32 / 0xff as f32 }
 
-      return Ok(Color::Srgba(hash.span, no_wrap, (
+      return Ok(Color::Hex(span, hash.span, no_wrap, (
         hex_to_f32(hex.get(0..2).unwrap()),
         hex_to_f32(hex.get(2..4).unwrap()),
         hex_to_f32(hex.get(4..6).unwrap()),
@@ -363,6 +364,15 @@ impl Generate for Color {
         let mut value = quote_spanned! {span=> Xyza};
         value.extend(quote! {::new(#x, #y, #z, #a)});
         (quote! {Xyza}, value, no_wrap)
+      }
+
+      Color::Hex(span1, span2, no_wrap, (r, g, b, a)) => {
+        let mut value = quote! {use};
+        value.extend(quote_spanned! {span1=> Srgba});
+        value.extend(quote! {;});
+        value.extend(quote_spanned! {span2=> Srgba});
+        value.extend(quote! {::new(#r, #g, #b, #a)});
+        (quote! {Srgba}, quote! {{ #value }}, no_wrap)
       }
 
       Color::Css(span, no_wrap, code, (r, g, b, a)) => {
