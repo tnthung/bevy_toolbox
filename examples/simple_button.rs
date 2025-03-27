@@ -16,8 +16,8 @@ fn setup(mut commands: Commands) {
 
     // Create a container that will center the button
     container (Node {
-      width: Val::Vw(100.0),
-      height: Val::Vh(100.0),
+      width: v!(100vw),
+      height: v!(100vh),
       align_items: AlignItems::Center,
       justify_content: JustifyContent::Center,
       ..Default::default()
@@ -26,9 +26,9 @@ fn setup(mut commands: Commands) {
     // Create a button as a child of the container
     container > simple_button (
       Button,
-      BorderRadius::all(Val::Px(5.0)),
+      BorderRadius::all(v!(5px)),
       BackgroundColor(c!(#0477BF)),
-      Node { padding: UiRect::all(Val::Px(10.0)), ..Default::default() },
+      Node { padding: UiRect::all(v!(10px)), ..Default::default() },
     )
       // Add a click event to the button
       .(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); })

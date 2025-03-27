@@ -7,6 +7,7 @@
 //!
 //! val ::=
 //!   | 'auto'
+//!   | '@'
 //!   | number '%'
 //!   | number + 'px'
 //!   | number + 'vw'
@@ -18,12 +19,6 @@
 //! number ::= INT | FLOAT ;
 //! ```
 use crate::*;
-
-
-pub fn value_impl(input: TokenStream) -> TokenStream {
-  if input.is_empty() { return TokenStream::new(); }
-  Value::parse.parse(input).unwrap().generate().into()
-}
 
 
 pub enum Value {
@@ -42,8 +37,13 @@ impl Parse for Value {
       let ident: Ident = input.parse()?;
       return match ident.to_string().as_str() {
         "auto" => Ok(Value::Auto(ident.span())),
-        _ => Err(Error::new(ident.span(), "invalid value")),
+        _ => Err(Error::new(ident.span(), "Invalid value")),
       };
+    }
+
+    if input.peek(Token![@]) {
+      let sym = input.parse::<Token![@]>()?;
+      return Ok(Value::Auto(sym.span));
     }
 
     let (span, value, unit) = if input.peek(LitFloat) {
@@ -57,7 +57,7 @@ impl Parse for Value {
       let unit  = token.suffix().to_string();
       (token.span(), value, unit)
     } else {
-      return Err(input.error("expected float or int"));
+      return Err(input.error("Expected float or int"));
     };
 
     if unit == "" && input.peek(Token![%]) {
@@ -71,7 +71,7 @@ impl Parse for Value {
       "vh"   => Ok(Value::Vh  (span, value)),
       "vmin" => Ok(Value::VMin(span, value)),
       "vmax" => Ok(Value::VMax(span, value)),
-      _ => Err(Error::new(span, "invalid unit")),
+      _ => Err(Error::new(span, "Invalid unit, expected px, vw, vh, vmin, vmax or %")),
     }
   }
 }
@@ -79,12 +79,12 @@ impl Parse for Value {
 impl Generate for Value {
   fn generate(self) -> proc_macro2::TokenStream {
     let (value, unit) = match self {
-      Value::Auto(span     ) => (None     , Ident::new("Auto", span)),
-      Value::Px  (span, val) => (Some(val), Ident::new("Px"  , span)),
-      Value::Vw  (span, val) => (Some(val), Ident::new("Vw"  , span)),
-      Value::Vh  (span, val) => (Some(val), Ident::new("Vh"  , span)),
-      Value::VMin(span, val) => (Some(val), Ident::new("VMin", span)),
-      Value::VMax(span, val) => (Some(val), Ident::new("VMax", span)),
+      Value::Auto(span     ) => (None                 , Ident::new("Auto", span)),
+      Value::Px  (span, val) => (Some(quote! {(#val)}), Ident::new("Px"  , span)),
+      Value::Vw  (span, val) => (Some(quote! {(#val)}), Ident::new("Vw"  , span)),
+      Value::Vh  (span, val) => (Some(quote! {(#val)}), Ident::new("Vh"  , span)),
+      Value::VMin(span, val) => (Some(quote! {(#val)}), Ident::new("VMin", span)),
+      Value::VMax(span, val) => (Some(quote! {(#val)}), Ident::new("VMax", span)),
 
       // special case
       Value::Percent(span1, span2, val) => {
@@ -94,6 +94,6 @@ impl Generate for Value {
       },
     };
 
-    quote! { bevy::ui::Val::#unit(#value) }
+    quote! { bevy::ui::Val::#unit #value }
   }
 }

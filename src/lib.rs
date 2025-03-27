@@ -291,7 +291,7 @@ use quote::*;
 /// ```
 #[proc_macro]
 pub fn spawn(input: TokenStream) -> TokenStream {
-  crate::spawn::spawn_impl(input)
+  apply::<crate::spawn::Spawn>(input, true)
 }
 
 
@@ -303,7 +303,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 ///
 /// * `+` in between tokens means there can be no space between them.
 ///
-/// 1. `Val::Auto`    - `auto`
+/// 1. `Val::Auto`    - `auto`, `@`
 /// 1. `Val::Percent` - `number '%'` *space is optional* (e.g. `10%`)
 /// 1. `Val::Px`      - `number + 'px'` (e.g. `10px`)
 /// 1. `Val::Vw`      - `number + 'vw'` (e.g. `10vw`)
@@ -313,6 +313,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 ///
 /// ```rs, no_run
 /// v!(auto);
+/// v!(@);
 /// v!(10%);
 /// v!(10px);
 /// v!(10 vw); // space not allowed, error will be thrown
@@ -325,6 +326,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 ///
 /// val ::=
 ///   | 'auto'
+///   | '@'
 ///   | number '%'
 ///   | number + 'px'
 ///   | number + 'vw'
@@ -337,15 +339,16 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn v(input: TokenStream) -> TokenStream {
-  crate::value::value_impl(input)
+  apply::<crate::value::Value>(input, false)
 }
 
 
-/// This macro is used to simplify the creation of the bevy's `Color` enum. The syntax is mimicking
-/// the CSS color syntax. The macro fully supports the auto completion for the color names and the
-/// color spaces.
+/// This macro is used to simplify the creation of the bevy's `Color` enum.
 ///
 /// # Syntax
+///
+/// The syntax is mimicking the CSS color syntax. The macro fully supports the auto completion for the
+/// color names and the color spaces.
 ///
 /// ## Hex
 ///
@@ -435,10 +438,29 @@ pub fn v(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn c(input: TokenStream) -> TokenStream {
-  crate::color::color_impl(input)
+  apply::<crate::color::Color>(input, false)
 }
 
 
 trait Generate {
   fn generate(self) -> proc_macro2::TokenStream;
+}
+
+
+fn apply<P: Parse+Generate>(input: TokenStream, allow_empty: bool) -> TokenStream {
+  if input.is_empty() {
+    if allow_empty {
+      return TokenStream::new();
+    }
+
+    return Error::new(
+      Span::call_site(),
+      "This macro can't be called without any input",
+    ).to_compile_error().into();
+  }
+
+  match P::parse.parse(input) {
+    Ok(value) => value.generate(),
+    Err(err) => err.to_compile_error(),
+  }.into()
 }

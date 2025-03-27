@@ -28,13 +28,7 @@
 use crate::*;
 
 
-pub fn spawn_impl(input: TokenStream) -> TokenStream {
-  if input.is_empty() { return TokenStream::new(); }
-  Spawn::parse.parse(input).unwrap().generate().into()
-}
-
-
-struct Spawn {
+pub struct Spawn {
   spawner  : Ident,
   top_level: Vec<TopLevel>,
 }
@@ -104,6 +98,7 @@ impl Parse for Definition {
 
       while input.peek(Token![.]) {
         if !input.peek2(Bracket) {
+          input.parse::<Token![.]>()?;
           return Err(input.error("Extensions cannot be chained after children group"));
         }
 
@@ -113,6 +108,10 @@ impl Parse for Definition {
 
       children
     };
+
+    if !input.peek(Token![;]) && !input.is_empty() {
+      return Err(input.error("Unexpected token, did you forget a ';' for previous entity?"));
+    }
 
     Ok(Definition {
       components,
@@ -283,11 +282,25 @@ enum Child {
 
 impl Parse for Child {
   fn parse(input: ParseStream) -> Result<Self> {
-    if input.peek(Ident) && input.peek2(Token![+]) {
-      return Ok(Child::Inserted(input.parse()?))
+    if input.peek(Ident) {
+      if input.peek2(Token![+]) {
+        return Ok(Child::Inserted(input.parse()?))
+      }
+
+      if input.peek2(Paren) {
+        return Ok(Child::Entity(input.parse()?))
+      }
+
+      if input.peek2(Token![>]) {
+        input.parse::<Ident>()?;
+        return Err(input.error("Parented is not allowed as a child"));
+      }
+
+      input.parse::<Ident>()?;
+      return Err(input.error("Expected '+' for inserted, or '()' for entity"));
     }
 
-    if input.peek(Ident) || input.peek(Paren) {
+    if input.peek(Paren) {
       return Ok(Child::Entity(input.parse()?))
     }
 
@@ -309,15 +322,25 @@ enum TopLevel {
 
 impl Parse for TopLevel {
   fn parse(input: ParseStream) -> Result<Self> {
-    if input.peek(Ident) && input.peek2(Token![>]) {
-      return Ok(TopLevel::Parented(input.parse()?))
+    if input.peek(Ident) {
+      if input.peek2(Token![>]) {
+        return Ok(TopLevel::Parented(input.parse()?))
+      }
+
+      if input.peek2(Token![+]) {
+        input.parse::<Ident>()?;
+        return Ok(TopLevel::Inserted(input.parse()?))
+      }
+
+      if input.peek2(Paren) {
+        return Ok(TopLevel::Entity(input.parse()?))
+      }
+
+      input.parse::<Ident>()?;
+      return Err(input.error("Expected '>' for parented, '+' for inserted, or '()' for entity"));
     }
 
-    if input.peek(Ident) && input.peek2(Token![+]) {
-      return Ok(TopLevel::Inserted(input.parse()?))
-    }
-
-    if input.peek(Ident) || input.peek(Paren) {
+    if input.peek(Paren) {
       return Ok(TopLevel::Entity(input.parse()?))
     }
 
@@ -384,10 +407,14 @@ struct Children(Vec<Child>);
 
 impl Parse for Children {
   fn parse(input: ParseStream) -> Result<Self> {
-    let content;
-    bracketed!(content in input);
+    Ok(Children({
+      let content;
+      bracketed!(content in input);
 
-    Ok(Children(content.parse_terminated(Child::parse, Token![;])?.into_iter().collect()))
+      content
+        .parse_terminated(Child::parse, Token![;])?
+        .into_iter().collect()
+    }))
   }
 }
 
