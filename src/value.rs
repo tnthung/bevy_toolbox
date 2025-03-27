@@ -37,7 +37,7 @@ impl Parse for Value {
       let ident: Ident = input.parse()?;
       return match ident.to_string().as_str() {
         "auto" => Ok(Value::Auto(ident.span())),
-        _ => Err(Error::new(ident.span(), "invalid value")),
+        _ => Err(Error::new(ident.span(), "Invalid value")),
       };
     }
 
@@ -57,7 +57,7 @@ impl Parse for Value {
       let unit  = token.suffix().to_string();
       (token.span(), value, unit)
     } else {
-      return Err(input.error("expected float or int"));
+      return Err(input.error("Expected float or int"));
     };
 
     if unit == "" && input.peek(Token![%]) {
@@ -71,7 +71,7 @@ impl Parse for Value {
       "vh"   => Ok(Value::Vh  (span, value)),
       "vmin" => Ok(Value::VMin(span, value)),
       "vmax" => Ok(Value::VMax(span, value)),
-      _ => Err(Error::new(span, "invalid unit")),
+      _ => Err(Error::new(span, "Invalid unit, expected px, vw, vh, vmin, vmax or %")),
     }
   }
 }
