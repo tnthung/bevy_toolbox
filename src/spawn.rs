@@ -36,7 +36,7 @@ pub struct Spawn {
 impl Parse for Spawn {
   fn parse(input: ParseStream) -> Result<Self> {
     Ok(Spawn {
-      spawner : input.parse()?,
+      spawner  : input.parse()?,
       top_level: input
         .parse_terminated(TopLevel::parse, Token![;])?
         .into_iter()
@@ -282,30 +282,17 @@ enum Child {
 
 impl Parse for Child {
   fn parse(input: ParseStream) -> Result<Self> {
+    if input.peek(Paren) { return Ok(Child::Entity   (input.parse()?)) }
+    if input.peek(Brace) { return Ok(Child::CodeBlock(input.parse()?)) }
+
     if input.peek(Ident) {
-      if input.peek2(Token![+]) {
-        return Ok(Child::Inserted(input.parse()?))
-      }
-
-      if input.peek2(Paren) {
-        return Ok(Child::Entity(input.parse()?))
-      }
-
-      if input.peek2(Token![>]) {
-        input.parse::<Ident>()?;
-        return Err(input.error("Parented is not allowed as a child"));
-      }
+      if input.peek2(Paren)     { return Ok(Child::Entity  (input.parse()?)) }
+      if input.peek2(Token![+]) { return Ok(Child::Inserted(input.parse()?)) }
 
       input.parse::<Ident>()?;
-      return Err(input.error("Expected '+' for inserted, or '()' for entity"));
-    }
-
-    if input.peek(Paren) {
-      return Ok(Child::Entity(input.parse()?))
-    }
-
-    if input.peek(Brace) {
-      return Ok(Child::CodeBlock(input.parse()?))
+      return Err(input.error(
+        if input.peek(Token![>]) { "Parented is not allowed as a child" }
+        else { "Expected '+' for inserted, or '()' for entity" }));
     }
 
     Err(input.error("Expected entity, inserted or code block"))
@@ -322,30 +309,16 @@ enum TopLevel {
 
 impl Parse for TopLevel {
   fn parse(input: ParseStream) -> Result<Self> {
+    if input.peek(Paren) { return Ok(TopLevel::Entity   (input.parse()?)) }
+    if input.peek(Brace) { return Ok(TopLevel::CodeBlock(input.parse()?)) }
+
     if input.peek(Ident) {
-      if input.peek2(Token![>]) {
-        return Ok(TopLevel::Parented(input.parse()?))
-      }
-
-      if input.peek2(Token![+]) {
-        input.parse::<Ident>()?;
-        return Ok(TopLevel::Inserted(input.parse()?))
-      }
-
-      if input.peek2(Paren) {
-        return Ok(TopLevel::Entity(input.parse()?))
-      }
+      if input.peek2(Paren)     { return Ok(TopLevel::Entity  (input.parse()?)) }
+      if input.peek2(Token![>]) { return Ok(TopLevel::Parented(input.parse()?)) }
+      if input.peek2(Token![+]) { return Ok(TopLevel::Inserted(input.parse()?)) }
 
       input.parse::<Ident>()?;
       return Err(input.error("Expected '>' for parented, '+' for inserted, or '()' for entity"));
-    }
-
-    if input.peek(Paren) {
-      return Ok(TopLevel::Entity(input.parse()?))
-    }
-
-    if input.peek(Brace) {
-      return Ok(TopLevel::CodeBlock(input.parse()?))
     }
 
     Err(input.error("Expected parented, inserted or code block"))
