@@ -375,13 +375,13 @@ impl Generate for Color {
         (quote! {Srgba}, quote! {{ #value }}, no_wrap)
       }
 
-      Color::Css(span, no_wrap, code, (r, g, b, a)) => {
+      Color::Css(span, no_wrap, c, (r, g, b, a)) => {
         let doc = format!("\
-          **Hex** `{code}`\\\n\
-          **R**   `{r   }`\\\n\
-          **G**   `{g   }`\\\n\
-          **B**   `{b   }`\\\n\
-          **A**   `{a   }`");
+          **Hex** `{c}`\\\n\
+          **R**   `{r}`\\\n\
+          **G**   `{g}`\\\n\
+          **B**   `{b}`\\\n\
+          **A**   `{a}`");
 
         let mut code = quote! {
           #[doc = #doc]
