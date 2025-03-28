@@ -31,6 +31,14 @@ use quote::*;
 /// }
 /// ```
 ///
+/// If you want to use the expression for the spawner, you can wrap it with `[]`.
+///
+/// ```rs, no_run
+/// fn foo(mut commands: Commands) {
+///   spawn! { [commands.reborrow()] }
+/// }
+/// ```
+///
 /// ## Top level
 ///
 /// Top level means the part of the macro thats been directly quoted by the macro itself.
@@ -285,7 +293,7 @@ use quote::*;
 /// method_call ::= name '(' argument<','>* ')' ;
 ///
 /// name        ::= IDENT ;
-/// spawner     ::= IDENT ;
+/// spawner     ::= IDENT | '[' EXPR ']';
 /// argument    ::= EXPR ;
 /// component   ::= EXPR ;
 /// code_block  ::= EXPR_BLOCK ;

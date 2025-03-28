@@ -28,6 +28,14 @@ fn bar(world: &mut World) {
 }
 ```
 
+If you want to use the expression for the spawner, you can wrap it with `[]`.
+
+```rs
+fn foo(mut commands: Commands) {
+  spawn! { [commands.reborrow()] }
+}
+```
+
 ## Top level
 
 Top level means the part of the macro thats been directly quoted by the macro itself.

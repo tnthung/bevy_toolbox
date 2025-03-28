@@ -20,7 +20,7 @@
 //! method_call ::= name '(' argument<','>* ')' ;
 //!
 //! name        ::= IDENT ;
-//! spawner     ::= IDENT ;
+//! spawner     ::= IDENT | '[' EXPR ']' ;
 //! argument    ::= EXPR ;
 //! component   ::= EXPR ;
 //! code_block  ::= EXPR_BLOCK ;
@@ -30,7 +30,7 @@ use crate::*;
 
 #[derive(Clone)]
 pub struct Spawn {
-  spawner  : Ident,
+  spawner  : Spawner,
   top_level: Vec<TopLevel>,
 }
 
@@ -50,15 +50,46 @@ impl Generate for Spawn {
   fn generate(&self) -> proc_macro2::TokenStream {
     let Spawn { spawner, top_level } = self;
 
-    let mut content = quote! {
-      let spawner = &mut #spawner;
-    };
+    let mut content = spawner.generate();
 
     for e in top_level {
       content.extend(e.generate());
     }
 
     quote! { { #content }; }
+  }
+}
+
+
+#[derive(Clone)]
+enum Spawner {
+  Ident(Ident),
+  Expr (Expr),
+}
+
+impl Parse for Spawner {
+  fn parse(input: ParseStream) -> Result<Self> {
+    if input.peek(Ident) {
+      Ok(Spawner::Ident(input.parse()?))
+    } else if input.peek(Bracket) {
+      let content;
+      bracketed!(content in input);
+      Ok(Spawner::Expr(content.parse()?))
+    } else {
+      Err(input.error("Expected identifier or expression"))
+    }
+  }
+}
+
+impl Generate for Spawner {
+  fn generate(&self) -> proc_macro2::TokenStream {
+    match self {
+      Spawner::Ident(ident) => quote! { let spawner = &mut #ident; },
+      Spawner::Expr (expr ) => quote! {
+        let mut spawner = #expr ;
+        let spawner = &mut spawner;
+      },
+    }
   }
 }
 
