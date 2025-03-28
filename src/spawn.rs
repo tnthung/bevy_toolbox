@@ -20,7 +20,7 @@
 //! method_call ::= name '(' argument<','>* ')' ;
 //!
 //! name        ::= IDENT ;
-//! spawner     ::= IDENT ;
+//! spawner     ::= IDENT | '[' EXPR ']' ;
 //! argument    ::= EXPR ;
 //! component   ::= EXPR ;
 //! code_block  ::= EXPR_BLOCK ;
@@ -28,15 +28,16 @@
 use crate::*;
 
 
+#[derive(Clone)]
 pub struct Spawn {
-  spawner  : Ident,
+  spawner  : Spawner,
   top_level: Vec<TopLevel>,
 }
 
 impl Parse for Spawn {
   fn parse(input: ParseStream) -> Result<Self> {
     Ok(Spawn {
-      spawner : input.parse()?,
+      spawner  : input.parse()?,
       top_level: input
         .parse_terminated(TopLevel::parse, Token![;])?
         .into_iter()
@@ -46,12 +47,10 @@ impl Parse for Spawn {
 }
 
 impl Generate for Spawn {
-  fn generate(self) -> proc_macro2::TokenStream {
+  fn generate(&self) -> proc_macro2::TokenStream {
     let Spawn { spawner, top_level } = self;
 
-    let mut content = quote! {
-      let spawner = &mut #spawner;
-    };
+    let mut content = spawner.generate();
 
     for e in top_level {
       content.extend(e.generate());
@@ -62,6 +61,40 @@ impl Generate for Spawn {
 }
 
 
+#[derive(Clone)]
+enum Spawner {
+  Ident(Ident),
+  Expr (Expr),
+}
+
+impl Parse for Spawner {
+  fn parse(input: ParseStream) -> Result<Self> {
+    if input.peek(Ident) {
+      Ok(Spawner::Ident(input.parse()?))
+    } else if input.peek(Bracket) {
+      let content;
+      bracketed!(content in input);
+      Ok(Spawner::Expr(content.parse()?))
+    } else {
+      Err(input.error("Expected identifier or expression"))
+    }
+  }
+}
+
+impl Generate for Spawner {
+  fn generate(&self) -> proc_macro2::TokenStream {
+    match self {
+      Spawner::Ident(ident) => quote! { let spawner = &mut #ident; },
+      Spawner::Expr (expr ) => quote! {
+        let mut spawner = #expr ;
+        let spawner = &mut spawner;
+      },
+    }
+  }
+}
+
+
+#[derive(Clone)]
 struct Definition {
   components: Vec<Expr>,
   extensions: Vec<Extension>,
@@ -122,6 +155,7 @@ impl Parse for Definition {
 }
 
 
+#[derive(Clone)]
 struct Entity {
   name      : Option<Ident>,
   definition: Definition,
@@ -143,7 +177,7 @@ impl Parse for Entity {
 }
 
 impl Generate for Entity {
-  fn generate(self) -> proc_macro2::TokenStream {
+  fn generate(&self) -> proc_macro2::TokenStream {
     let Entity     { name, definition } = self;
     let Definition { components, extensions, children } = definition;
 
@@ -168,12 +202,13 @@ impl Generate for Entity {
       content.extend(group.generate());
     }
 
-    let naming = name.map(|n| quote! { let #n = });
+    let naming = name.clone().map(|n| quote! { let #n = });
     quote! { #naming { #content this }; }
   }
 }
 
 
+#[derive(Clone)]
 struct Parented {
   parent: Ident,
   entity: Entity,
@@ -192,7 +227,7 @@ impl Parse for Parented {
 }
 
 impl Generate for Parented {
-  fn generate(self) -> proc_macro2::TokenStream {
+  fn generate(&self) -> proc_macro2::TokenStream {
     let Parented   { parent, entity } = self;
     let Entity     { name, definition } = entity;
     let Definition { components, extensions, children } = definition;
@@ -219,12 +254,13 @@ impl Generate for Parented {
       content.extend(group.generate());
     }
 
-    let naming = name.map(|n| quote! { let #n = });
+    let naming = name.clone().map(|n| quote! { let #n = });
     quote! { #naming { #content this }; }
   }
 }
 
 
+#[derive(Clone)]
 struct Inserted {
   base  : Ident,
   entity: Definition,
@@ -243,7 +279,7 @@ impl Parse for Inserted {
 }
 
 impl Generate for Inserted {
-  fn generate(self) -> proc_macro2::TokenStream {
+  fn generate(&self) -> proc_macro2::TokenStream {
     let Inserted   { base, entity } = self;
     let Definition { components, extensions, children } = entity;
 
@@ -274,6 +310,7 @@ impl Generate for Inserted {
 }
 
 
+#[derive(Clone)]
 enum Child {
   Entity   (Entity),
   Inserted (Inserted),
@@ -282,30 +319,17 @@ enum Child {
 
 impl Parse for Child {
   fn parse(input: ParseStream) -> Result<Self> {
+    if input.peek(Paren) { return Ok(Child::Entity   (input.parse()?)) }
+    if input.peek(Brace) { return Ok(Child::CodeBlock(input.parse()?)) }
+
     if input.peek(Ident) {
-      if input.peek2(Token![+]) {
-        return Ok(Child::Inserted(input.parse()?))
-      }
-
-      if input.peek2(Paren) {
-        return Ok(Child::Entity(input.parse()?))
-      }
-
-      if input.peek2(Token![>]) {
-        input.parse::<Ident>()?;
-        return Err(input.error("Parented is not allowed as a child"));
-      }
+      if input.peek2(Paren)     { return Ok(Child::Entity  (input.parse()?)) }
+      if input.peek2(Token![+]) { return Ok(Child::Inserted(input.parse()?)) }
 
       input.parse::<Ident>()?;
-      return Err(input.error("Expected '+' for inserted, or '()' for entity"));
-    }
-
-    if input.peek(Paren) {
-      return Ok(Child::Entity(input.parse()?))
-    }
-
-    if input.peek(Brace) {
-      return Ok(Child::CodeBlock(input.parse()?))
+      return Err(input.error(
+        if input.peek(Token![>]) { "Parented is not allowed as a child" }
+        else { "Expected '+' for inserted, or '()' for entity" }));
     }
 
     Err(input.error("Expected entity, inserted or code block"))
@@ -313,6 +337,7 @@ impl Parse for Child {
 }
 
 
+#[derive(Clone)]
 enum TopLevel {
   Entity   (Entity),
   Parented (Parented),
@@ -322,30 +347,16 @@ enum TopLevel {
 
 impl Parse for TopLevel {
   fn parse(input: ParseStream) -> Result<Self> {
+    if input.peek(Paren) { return Ok(TopLevel::Entity   (input.parse()?)) }
+    if input.peek(Brace) { return Ok(TopLevel::CodeBlock(input.parse()?)) }
+
     if input.peek(Ident) {
-      if input.peek2(Token![>]) {
-        return Ok(TopLevel::Parented(input.parse()?))
-      }
-
-      if input.peek2(Token![+]) {
-        input.parse::<Ident>()?;
-        return Ok(TopLevel::Inserted(input.parse()?))
-      }
-
-      if input.peek2(Paren) {
-        return Ok(TopLevel::Entity(input.parse()?))
-      }
+      if input.peek2(Paren)     { return Ok(TopLevel::Entity  (input.parse()?)) }
+      if input.peek2(Token![>]) { return Ok(TopLevel::Parented(input.parse()?)) }
+      if input.peek2(Token![+]) { return Ok(TopLevel::Inserted(input.parse()?)) }
 
       input.parse::<Ident>()?;
       return Err(input.error("Expected '>' for parented, '+' for inserted, or '()' for entity"));
-    }
-
-    if input.peek(Paren) {
-      return Ok(TopLevel::Entity(input.parse()?))
-    }
-
-    if input.peek(Brace) {
-      return Ok(TopLevel::CodeBlock(input.parse()?))
     }
 
     Err(input.error("Expected parented, inserted or code block"))
@@ -353,7 +364,7 @@ impl Parse for TopLevel {
 }
 
 impl Generate for TopLevel {
-  fn generate(self) -> proc_macro2::TokenStream {
+  fn generate(&self) -> proc_macro2::TokenStream {
     match self {
       TopLevel::Entity   (entity  ) => entity  .generate(),
       TopLevel::Parented (parented) => parented.generate(),
@@ -364,6 +375,7 @@ impl Generate for TopLevel {
 }
 
 
+#[derive(Clone)]
 enum Extension {
   Observe   (Expr),
   MethodCall(MethodCall),
@@ -403,6 +415,7 @@ impl Parse for Extension {
 }
 
 
+#[derive(Clone)]
 struct Children(Vec<Child>);
 
 impl Parse for Children {
@@ -419,7 +432,7 @@ impl Parse for Children {
 }
 
 impl Generate for Children {
-  fn generate(self) -> proc_macro2::TokenStream {
+  fn generate(&self) -> proc_macro2::TokenStream {
     let Children(children) = self;
 
     let mut result = quote! {
@@ -432,6 +445,7 @@ impl Generate for Children {
         Child::Inserted (inserted) => inserted.generate(),
         Child::Entity   (entity  ) => {
           let parent = Ident::new("parent", Span::call_site());
+          let entity = entity.clone();
           Parented { parent, entity }.generate()
         },
       });
@@ -442,6 +456,7 @@ impl Generate for Children {
 }
 
 
+#[derive(Clone)]
 struct MethodCall(Ident, Vec<Expr>);
 
 impl Parse for MethodCall {
@@ -462,7 +477,7 @@ impl Parse for MethodCall {
 }
 
 impl Generate for MethodCall {
-  fn generate(self) -> proc_macro2::TokenStream {
+  fn generate(&self) -> proc_macro2::TokenStream {
     let MethodCall(name, args) = self;
     quote! { entity. #name (#(#args),*); }
   }

@@ -1,6 +1,6 @@
 [package]
 name        = "bevy_toolbox"
-version     = "0.1.4"
+version     = "0.1.5"
 edition     = "2021"
 license     = "MIT"
 repository  = "https://github.com/tnthung/bevy_toolbox"
@@ -20,3 +20,7 @@ bevy = "0.15.3"
 [[example]]
 name = "simple_button"
 path = "examples/simple_button.rs"
+
+[[example]]
+name = "simple_menu"
+path = "examples/simple_menu.rs"

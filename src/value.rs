@@ -3,9 +3,7 @@
 //! * `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
 //!
 //! ```txt
-//! v ::= val;
-//!
-//! val ::=
+//! v ::=
 //!   | 'auto'
 //!   | '@'
 //!   | number '%'
@@ -21,6 +19,7 @@
 use crate::*;
 
 
+#[derive(Clone)]
 pub enum Value {
   Auto   (Span),
   Px     (Span, f32),
@@ -77,19 +76,19 @@ impl Parse for Value {
 }
 
 impl Generate for Value {
-  fn generate(self) -> proc_macro2::TokenStream {
+  fn generate(&self) -> proc_macro2::TokenStream {
     let (value, unit) = match self {
-      Value::Auto(span     ) => (None                 , Ident::new("Auto", span)),
-      Value::Px  (span, val) => (Some(quote! {(#val)}), Ident::new("Px"  , span)),
-      Value::Vw  (span, val) => (Some(quote! {(#val)}), Ident::new("Vw"  , span)),
-      Value::Vh  (span, val) => (Some(quote! {(#val)}), Ident::new("Vh"  , span)),
-      Value::VMin(span, val) => (Some(quote! {(#val)}), Ident::new("VMin", span)),
-      Value::VMax(span, val) => (Some(quote! {(#val)}), Ident::new("VMax", span)),
+      Value::Auto(span     ) => (None                 , Ident::new("Auto", *span)),
+      Value::Px  (span, val) => (Some(quote! {(#val)}), Ident::new("Px"  , *span)),
+      Value::Vw  (span, val) => (Some(quote! {(#val)}), Ident::new("Vw"  , *span)),
+      Value::Vh  (span, val) => (Some(quote! {(#val)}), Ident::new("Vh"  , *span)),
+      Value::VMin(span, val) => (Some(quote! {(#val)}), Ident::new("VMin", *span)),
+      Value::VMax(span, val) => (Some(quote! {(#val)}), Ident::new("VMax", *span)),
 
       // special case
       Value::Percent(span1, span2, val) => {
-        let i1 = Ident::new("Percent", span1);
-        let i2 = Ident::new("Percent", span2);
+        let i1 = Ident::new("Percent", *span1);
+        let i2 = Ident::new("Percent", *span2);
         return quote! {{ bevy::ui::Val::#i1; bevy::ui::Val::#i2(#val) }};
       },
     };

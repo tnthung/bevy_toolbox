@@ -30,6 +30,7 @@
 use crate::*;
 
 
+#[derive(Clone)]
 pub enum Color {
   Srgba     (Span, bool, (f32, f32, f32, f32)),
   LinearRgba(Span, bool, (f32, f32, f32, f32)),
@@ -304,73 +305,73 @@ impl Parse for Color {
 }
 
 impl Generate for Color {
-  fn generate(self) -> proc_macro2::TokenStream {
+  fn generate(&self) -> proc_macro2::TokenStream {
     let (kind, value, no_wrap) = match self {
       Color::Srgba(span, no_wrap, (r, g, b, a)) => {
-        let mut value = quote_spanned! {span=> Srgba};
+        let mut value = quote_spanned! {span.clone()=> Srgba};
         value.extend(quote! {::new(#r, #g, #b, #a)});
         (quote! {Srgba}, value, no_wrap)
       }
 
       Color::LinearRgba(span, no_wrap, (r, g, b, a)) => {
-        let mut value = quote_spanned! {span=> LinearRgba};
+        let mut value = quote_spanned! {span.clone()=> LinearRgba};
         value.extend(quote! {::new(#r, #g, #b, #a)});
         (quote! {LinearRgba}, value, no_wrap)
       }
 
       Color::Hsla(span, no_wrap, (h, s, l, a)) => {
-        let mut value = quote_spanned! {span=> Hsla};
+        let mut value = quote_spanned! {span.clone()=> Hsla};
         value.extend(quote! {::new(#h, #s, #l, #a)});
         (quote! {Hsla}, value, no_wrap)
       }
 
       Color::Hsva(span, no_wrap, (h, s, v, a)) => {
-        let mut value = quote_spanned! {span=> Hsva};
+        let mut value = quote_spanned! {span.clone()=> Hsva};
         value.extend(quote! {::new(#h, #s, #v, #a)});
         (quote! {Hsva}, value, no_wrap)
       }
 
       Color::Hwba(span, no_wrap, (h, w, b, a)) => {
-        let mut value = quote_spanned! {span=> Hwba};
+        let mut value = quote_spanned! {span.clone()=> Hwba};
         value.extend(quote! {::new(#h, #w, #b, #a)});
         (quote! {Hwba}, value, no_wrap)
       }
 
       Color::Laba(span, no_wrap, (l, a, b, _a)) => {
-        let mut value = quote_spanned! {span=> Laba};
+        let mut value = quote_spanned! {span.clone()=> Laba};
         value.extend(quote! {::new(#l, #a, #b, #_a)});
         (quote! {Laba}, value, no_wrap)
       }
 
       Color::Lcha(span, no_wrap, (l, c, h, a)) => {
-        let mut value = quote_spanned! {span=> Lcha};
+        let mut value = quote_spanned! {span.clone()=> Lcha};
         value.extend(quote! {::new(#l, #c, #h, #a)});
         (quote! {Lcha}, value, no_wrap)
       }
 
       Color::Oklaba(span, no_wrap, (l, a, b, _a)) => {
-        let mut value = quote_spanned! {span=> Oklaba};
+        let mut value = quote_spanned! {span.clone()=> Oklaba};
         value.extend(quote! {::new(#l, #a, #b, #_a)});
         (quote! {Oklaba}, value, no_wrap)
       }
 
       Color::Oklcha(span, no_wrap, (l, c, h, a)) => {
-        let mut value = quote_spanned! {span=> Oklcha};
+        let mut value = quote_spanned! {span.clone()=> Oklcha};
         value.extend(quote! {::new(#l, #c, #h, #a)});
         (quote! {Oklcha}, value, no_wrap)
       }
 
       Color::Xyza(span, no_wrap, (x, y, z, a)) => {
-        let mut value = quote_spanned! {span=> Xyza};
+        let mut value = quote_spanned! {span.clone()=> Xyza};
         value.extend(quote! {::new(#x, #y, #z, #a)});
         (quote! {Xyza}, value, no_wrap)
       }
 
       Color::Hex(span1, span2, no_wrap, (r, g, b, a)) => {
         let mut value = quote! {use};
-        value.extend(quote_spanned! {span1=> Srgba});
+        value.extend(quote_spanned! {span1.clone()=> Srgba});
         value.extend(quote! {;});
-        value.extend(quote_spanned! {span2=> Srgba});
+        value.extend(quote_spanned! {span2.clone()=> Srgba});
         value.extend(quote! {::new(#r, #g, #b, #a)});
         (quote! {Srgba}, quote! {{ #value }}, no_wrap)
       }
@@ -388,7 +389,7 @@ impl Generate for Color {
           struct
         };
 
-        code.extend(quote_spanned! {span=> ColorCode});
+        code.extend(quote_spanned! {span.clone()=> ColorCode});
 
         (quote! {Srgba}, quote! {{
           #code;
@@ -568,7 +569,7 @@ impl Generate for Color {
       }
     };
 
-    if no_wrap {
+    if *no_wrap {
       return quote! {{
         use bevy::color::*;
         #value
