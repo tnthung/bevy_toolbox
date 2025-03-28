@@ -1115,7 +1115,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_toolbox"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "bevy",
  "proc-macro2",
