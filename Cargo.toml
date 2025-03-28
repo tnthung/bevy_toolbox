@@ -20,3 +20,7 @@ bevy = "0.15.3"
 [[example]]
 name = "simple_button"
 path = "examples/simple_button.rs"
+
+[[example]]
+name = "simple_menu"
+path = "examples/simple_menu.rs"
