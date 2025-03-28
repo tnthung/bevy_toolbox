@@ -7,6 +7,7 @@ Table of Contents:
 - [spawn!](#spawn)
 - [v!](#v)
 - [c!](#c)
+- [e!](#e)
 
 # `spawn!`
 
@@ -349,7 +350,37 @@ c!(darkolivegreen);
 The `c!` macro by default will wrap the color with `Color` enum, but sometimes you might just want
 the inner value that color represents. To do this, simply adding `!` before the color.
 
-```rs, no_run
+```rs
 c!( #fff); // Color::Srgba(Srgba::new(1.0, 1.0, 1.0, 1.0))
 c!(!#000); //              Srgba::new(0.0, 0.0, 0.0, 1.0)
+```
+
+
+# `e!`
+
+
+This macro is used to simplify the creation of the bevy's `UiRect` struct.
+
+## Syntax
+
+Within the macro, you can specify 1-4 values separated by space. The values will be used for the
+top, right, bottom, and left sides of the `UiRect`. Each value can be a `Val` or `_` for default.
+It basically follows how CSS sides selection works.
+
+```rs
+e!(10px);                     // all sides are 10px
+e!(10px 20px);                // top and bottom are 10px, right and left are 20px
+e!(10px 20px 30px);           // top is 10px, right and left are 20px, bottom is 30px
+e!(10px 20px 30px 40px);      // top is 10px, right is 20px, bottom is 30px, left is 40px
+e!(10px 20px 30px 40px 50px); // error, only 4 values are allowed
+```
+
+## Grammar
+
+* `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
+
+```txt
+e ::= val_or_omit{1,4};
+
+val_or_omit ::= v | '_';
 ```
