@@ -3,9 +3,7 @@
 //! * `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
 //!
 //! ```txt
-//! v ::= val;
-//!
-//! val ::=
+//! v ::=
 //!   | 'auto'
 //!   | '@'
 //!   | number '%'

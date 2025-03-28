@@ -322,9 +322,7 @@ pub fn spawn(input: TokenStream) -> TokenStream {
 /// # Grammar
 ///
 /// ```txt
-/// v ::= val;
-///
-/// val ::=
+/// v ::=
 ///   | 'auto'
 ///   | '@'
 ///   | number '%'
