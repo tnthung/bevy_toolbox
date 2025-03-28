@@ -28,7 +28,7 @@ fn setup(mut commands: Commands) {
       Button,
       BorderRadius::all(v!(5px)),
       BackgroundColor(c!(#0477BF)),
-      Node { padding: UiRect::all(v!(10px)), ..Default::default() },
+      Node { padding: e!(10px), ..Default::default() },
     )
       // Add a click event to the button
       .(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); })
