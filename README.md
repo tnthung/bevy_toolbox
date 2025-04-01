@@ -4,10 +4,10 @@ A simple crate that provides macros for simplifying some common Bevy tasks.
 
 Table of Contents:
 
-- [spawn!](#spawn)
-- [v!](#v)
-- [c!](#c)
-- [e!](#e)
+- [spawn!](#spawn) - Entity creation macro
+- [v!    ](#v    ) - Val enum simplification
+- [c!    ](#c    ) - Color enum simplification
+- [e!    ](#e    ) - UiRect struct simplification
 
 # `spawn!`
 
