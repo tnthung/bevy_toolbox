@@ -510,7 +510,7 @@ fn apply<P: Parse+Generate>(input: TokenStream, allow_empty: bool) -> TokenStrea
 
 
 #[derive(Clone)]
-enum MightOmit<T: Parse> {
+enum MightOmit<T> {
   Value(T),
   Omit(Span),
 }
@@ -526,7 +526,7 @@ impl<T: Parse> Parse for MightOmit<T> {
   }
 }
 
-impl<T: Parse+Generate> Generate for MightOmit<T> {
+impl<T: Generate> Generate for MightOmit<T> {
   fn generate(&self) -> proc_macro2::TokenStream {
     match self {
       MightOmit::Value(value) => value.generate(),
