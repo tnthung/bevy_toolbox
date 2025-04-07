@@ -8,6 +8,7 @@
 //! val_or_omit ::= v | '_';
 //! ```
 use crate::*;
+use value::ValOrOmit;
 
 
 pub struct Edges(Vec<ValOrOmit>);
@@ -62,33 +63,6 @@ impl Generate for Edges {
       }
 
       _ => unreachable!(),
-    }
-  }
-}
-
-
-#[derive(Clone)]
-enum ValOrOmit {
-  Val(value::Value),
-  Omit,
-}
-
-impl Parse for ValOrOmit {
-  fn parse(input: ParseStream) -> Result<Self> {
-    if input.peek(Token![_]) {
-      input.parse::<Token![_]>()?;
-      Ok(ValOrOmit::Omit)
-    } else {
-      Ok(ValOrOmit::Val(value::Value::parse(input)?))
-    }
-  }
-}
-
-impl Generate for ValOrOmit {
-  fn generate(&self) -> proc_macro2::TokenStream {
-    match self {
-      ValOrOmit::Val(v) => v.generate(),
-      ValOrOmit::Omit => quote! { bevy::ui::Val::default() },
     }
   }
 }
