@@ -11,7 +11,12 @@ use crate::*;
 use value::ValueOrOmit;
 
 
-pub struct Edges(Vec<ValueOrOmit>);
+pub struct Edges {
+  pub top   : ValueOrOmit,
+  pub right : ValueOrOmit,
+  pub bottom: ValueOrOmit,
+  pub left  : ValueOrOmit,
+}
 
 impl Parse for Edges {
   fn parse(input: ParseStream) -> Result<Self> {
@@ -25,44 +30,54 @@ impl Parse for Edges {
       return Err(input.error("Expected 1-4 value or '_'"));
     }
 
-    Ok(Edges(values))
+    match values.as_slice() {
+      [v1] => Ok(Edges {
+        top   : v1.clone(),
+        right : v1.clone(),
+        bottom: v1.clone(),
+        left  : v1.clone(),
+      }),
+
+      [v1, v2] => return Ok(Edges {
+        top   : v1.clone(),
+        right : v2.clone(),
+        bottom: v1.clone(),
+        left  : v2.clone(),
+      }),
+
+      [v1, v2, v3] => return Ok(Edges {
+        top   : v1.clone(),
+        right : v2.clone(),
+        bottom: v3.clone(),
+        left  : v2.clone(),
+      }),
+
+      [v1, v2, v3, v4] =>  return Ok(Edges {
+        top   : v1.clone(),
+        right : v2.clone(),
+        bottom: v3.clone(),
+        left  : v4.clone(),
+      }),
+
+      _ => unreachable!()
+    }
   }
 }
 
 impl Generate for Edges {
   fn generate(&self) -> proc_macro2::TokenStream {
-    match self.0.as_slice() {
-      // all sides
-      [v1] => {
-        let a = v1.generate();
-        quote! { bevy::ui::UiRect { top: #a, right: #a, bottom: #a, left: #a } }
-      }
+    let top    = self.top   .generate();
+    let right  = self.right .generate();
+    let bottom = self.bottom.generate();
+    let left   = self.left  .generate();
 
-      // vertical, horizontal
-      [v1, v2] => {
-        let v = v1.generate();
-        let h = v2.generate();
-        quote! { bevy::ui::UiRect { top: #v, right: #h, bottom: #v, left: #h } }
+    quote! {
+      bevy::ui::UiRect {
+        top:    #top,
+        right:  #right,
+        bottom: #bottom,
+        left:   #left,
       }
-
-      // top, horizontal, bottom
-      [v1, v2, v3] => {
-        let t = v1.generate();
-        let h = v2.generate();
-        let b = v3.generate();
-        quote! { bevy::ui::UiRect { top: #t, right: #h, bottom: #b, left: #h } }
-      }
-
-      // top, right, bottom, left
-      [v1, v2, v3, v4] => {
-        let t = v1.generate();
-        let r = v2.generate();
-        let b = v3.generate();
-        let l = v4.generate();
-        quote! { bevy::ui::UiRect { top: #t, right: #r, bottom: #b, left: #l } }
-      }
-
-      _ => unreachable!(),
     }
   }
 }
