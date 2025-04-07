@@ -8,14 +8,14 @@
 //! val_or_omit ::= v | '_';
 //! ```
 use crate::*;
-use value::ValueOrOmit;
+use value::*;
 
 
 pub struct Edges {
-  pub top   : ValueOrOmit,
-  pub right : ValueOrOmit,
-  pub bottom: ValueOrOmit,
-  pub left  : ValueOrOmit,
+  pub top   : MightOmit<Value>,
+  pub right : MightOmit<Value>,
+  pub bottom: MightOmit<Value>,
+  pub left  : MightOmit<Value>,
 }
 
 impl Parse for Edges {
@@ -23,7 +23,7 @@ impl Parse for Edges {
     let mut values = Vec::new();
 
     while !input.is_empty() && values.len() < 4 {
-      values.push(ValueOrOmit::parse(input)?);
+      values.push(MightOmit::<Value>::parse(input)?);
     }
 
     if !input.is_empty() || values.is_empty() {

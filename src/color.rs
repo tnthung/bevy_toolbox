@@ -581,31 +581,8 @@ impl Generate for Color {
       Color::#kind(#value)
     }}
   }
-}
 
-
-#[derive(Clone)]
-pub enum ColorOrOmit {
-  Color(Color),
-  Omit,
-}
-
-impl Parse for ColorOrOmit {
-  fn parse(input: ParseStream) -> Result<Self> {
-    if input.peek(Token![_]) {
-      input.parse::<Token![_]>()?;
-      Ok(ColorOrOmit::Omit)
-    } else {
-      Ok(ColorOrOmit::Color(Color::parse(input)?))
-    }
-  }
-}
-
-impl Generate for ColorOrOmit {
-  fn generate(&self) -> proc_macro2::TokenStream {
-    match self {
-      ColorOrOmit::Color(v) => v.generate(),
-      ColorOrOmit::Omit => quote! { bevy::color::Color::default() },
-    }
+  fn generate_default() -> proc_macro2::TokenStream {
+    quote! {bevy::color::Color::default()}
   }
 }

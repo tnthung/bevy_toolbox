@@ -95,31 +95,8 @@ impl Generate for Value {
 
     quote! { bevy::ui::Val::#unit #value }
   }
-}
 
-
-#[derive(Clone)]
-pub enum ValueOrOmit {
-  Value(Value),
-  Omit,
-}
-
-impl Parse for ValueOrOmit {
-  fn parse(input: ParseStream) -> Result<Self> {
-    if input.peek(Token![_]) {
-      input.parse::<Token![_]>()?;
-      Ok(ValueOrOmit::Omit)
-    } else {
-      Ok(ValueOrOmit::Value(Value::parse(input)?))
-    }
-  }
-}
-
-impl Generate for ValueOrOmit {
-  fn generate(&self) -> proc_macro2::TokenStream {
-    match self {
-      ValueOrOmit::Value(v) => v.generate(),
-      ValueOrOmit::Omit => quote! { bevy::ui::Val::default() },
-    }
+  fn generate_default() -> proc_macro2::TokenStream {
+    quote! { bevy::ui::Val::default() }
   }
 }

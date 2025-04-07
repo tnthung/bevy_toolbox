@@ -8,14 +8,14 @@
 //! val_or_omit ::= v | '_';
 //! ```
 use crate::*;
-use value::ValueOrOmit;
+use value::*;
 
 
 pub struct Turns {
-  pub top_left    : ValueOrOmit,
-  pub top_right   : ValueOrOmit,
-  pub bottom_right: ValueOrOmit,
-  pub bottom_left : ValueOrOmit,
+  pub top_left    : MightOmit<Value>,
+  pub top_right   : MightOmit<Value>,
+  pub bottom_right: MightOmit<Value>,
+  pub bottom_left : MightOmit<Value>,
 }
 
 impl Parse for Turns {
@@ -23,7 +23,7 @@ impl Parse for Turns {
     let mut values = Vec::new();
 
     while !input.is_empty() && values.len() < 4 {
-      values.push(ValueOrOmit::parse(input)?);
+      values.push(MightOmit::<Value>::parse(input)?);
     }
 
     if !input.is_empty() || values.is_empty() {
