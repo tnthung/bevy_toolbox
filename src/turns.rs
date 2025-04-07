@@ -31,43 +31,35 @@ impl Parse for Turns {
     }
 
     match values.as_slice() {
-      [v1] => {
-        Ok(Turns {
-          top_left    : v1.clone(),
-          top_right   : v1.clone(),
-          bottom_right: v1.clone(),
-          bottom_left : v1.clone(),
-        })
-      }
+      [v1] => Ok(Turns {
+        top_left    : v1.clone(),
+        top_right   : v1.clone(),
+        bottom_right: v1.clone(),
+        bottom_left : v1.clone(),
+      }),
 
-      [v1, v2] => {
-        Ok(Turns {
-          top_left    : v1.clone(),
-          top_right   : v1.clone(),
-          bottom_right: v2.clone(),
-          bottom_left : v2.clone(),
-        })
-      }
+      [v1, v2] => Ok(Turns {
+        top_left    : v1.clone(),
+        top_right   : v1.clone(),
+        bottom_right: v2.clone(),
+        bottom_left : v2.clone(),
+      }),
 
-      [v1, v2, v3] => {
-        Ok(Turns {
-          top_left    : v1.clone(),
-          top_right   : v2.clone(),
-          bottom_right: v3.clone(),
-          bottom_left : v3.clone(),
-        })
-      }
+      [v1, v2, v3] => Ok(Turns {
+        top_left    : v1.clone(),
+        top_right   : v2.clone(),
+        bottom_right: v3.clone(),
+        bottom_left : v3.clone(),
+      }),
 
-      [v1, v2, v3, v4] => {
-        Ok(Turns {
-          top_left    : v1.clone(),
-          top_right   : v2.clone(),
-          bottom_right: v3.clone(),
-          bottom_left : v4.clone(),
-        })
-      }
+      [v1, v2, v3, v4] => Ok(Turns {
+        top_left    : v1.clone(),
+        top_right   : v2.clone(),
+        bottom_right: v3.clone(),
+        bottom_left : v4.clone(),
+      }),
 
-      _ => unreachable!(),
+      _ => unreachable!()
     }
   }
 }
