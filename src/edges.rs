@@ -8,87 +8,123 @@
 //! val_or_omit ::= v | '_';
 //! ```
 use crate::*;
+use value::*;
 
 
-pub struct Edges(Vec<ValOrOmit>);
+pub struct Edges {
+  pub top   : MightOmit<Value>,
+  pub right : MightOmit<Value>,
+  pub bottom: MightOmit<Value>,
+  pub left  : MightOmit<Value>,
+}
 
 impl Parse for Edges {
   fn parse(input: ParseStream) -> Result<Self> {
     let mut values = Vec::new();
 
     while !input.is_empty() && values.len() < 4 {
-      values.push(ValOrOmit::parse(input)?);
+      values.push(MightOmit::<Value>::parse(input)?);
     }
 
     if !input.is_empty() || values.is_empty() {
       return Err(input.error("Expected 1-4 value or '_'"));
     }
 
-    Ok(Edges(values))
+    match values.as_slice() {
+      [v1] => Ok(Edges {
+        top   : v1.clone(),
+        right : v1.clone(),
+        bottom: v1.clone(),
+        left  : v1.clone(),
+      }),
+
+      [v1, v2] => return Ok(Edges {
+        top   : v1.clone(),
+        right : v2.clone(),
+        bottom: v1.clone(),
+        left  : v2.clone(),
+      }),
+
+      [v1, v2, v3] => return Ok(Edges {
+        top   : v1.clone(),
+        right : v2.clone(),
+        bottom: v3.clone(),
+        left  : v2.clone(),
+      }),
+
+      [v1, v2, v3, v4] =>  return Ok(Edges {
+        top   : v1.clone(),
+        right : v2.clone(),
+        bottom: v3.clone(),
+        left  : v4.clone(),
+      }),
+
+      _ => unreachable!()
+    }
   }
 }
 
 impl Generate for Edges {
   fn generate(&self) -> proc_macro2::TokenStream {
-    match self.0.as_slice() {
-      // all sides
-      [v1] => {
-        let a = v1.generate();
-        quote! { bevy::ui::UiRect { top: #a, right: #a, bottom: #a, left: #a } }
-      }
+    let top    = self.top   .generate();
+    let right  = self.right .generate();
+    let bottom = self.bottom.generate();
+    let left   = self.left  .generate();
 
-      // vertical, horizontal
-      [v1, v2] => {
-        let v = v1.generate();
-        let h = v2.generate();
-        quote! { bevy::ui::UiRect { top: #v, right: #h, bottom: #v, left: #h } }
-      }
+    let mut result = quote! {};
 
-      // top, horizontal, bottom
-      [v1, v2, v3] => {
-        let t = v1.generate();
-        let h = v2.generate();
-        let b = v3.generate();
-        quote! { bevy::ui::UiRect { top: #t, right: #h, bottom: #b, left: #h } }
-      }
+    {
+      let span = match &self.top {
+        MightOmit::Omit (s) => s,
+        MightOmit::Value(t) => t.span(),
+      };
 
-      // top, right, bottom, left
-      [v1, v2, v3, v4] => {
-        let t = v1.generate();
-        let r = v2.generate();
-        let b = v3.generate();
-        let l = v4.generate();
-        quote! { bevy::ui::UiRect { top: #t, right: #r, bottom: #b, left: #l } }
-      }
-
-      _ => unreachable!(),
+      result.extend(quote! { struct });
+      result.extend(quote_spanned! {*span=> Top });
+      result.extend(quote! { ; });
     }
-  }
-}
 
+    {
+      let span = match &self.right {
+        MightOmit::Omit (s) => s,
+        MightOmit::Value(t) => t.span(),
+      };
 
-#[derive(Clone)]
-enum ValOrOmit {
-  Val(value::Value),
-  Omit,
-}
-
-impl Parse for ValOrOmit {
-  fn parse(input: ParseStream) -> Result<Self> {
-    if input.peek(Token![_]) {
-      input.parse::<Token![_]>()?;
-      Ok(ValOrOmit::Omit)
-    } else {
-      Ok(ValOrOmit::Val(value::Value::parse(input)?))
+      result.extend(quote! { struct });
+      result.extend(quote_spanned! {*span=> Right });
+      result.extend(quote! { ; });
     }
-  }
-}
 
-impl Generate for ValOrOmit {
-  fn generate(&self) -> proc_macro2::TokenStream {
-    match self {
-      ValOrOmit::Val(v) => v.generate(),
-      ValOrOmit::Omit => quote! { bevy::ui::Val::default() },
+    {
+      let span = match &self.bottom {
+        MightOmit::Omit (s) => s,
+        MightOmit::Value(t) => t.span(),
+      };
+
+      result.extend(quote! { struct });
+      result.extend(quote_spanned! {*span=> Bottom });
+      result.extend(quote! { ; });
     }
+    {
+      let span = match &self.left {
+        MightOmit::Omit (s) => s,
+        MightOmit::Value(t) => t.span(),
+      };
+
+      result.extend(quote! { struct });
+      result.extend(quote_spanned! {*span=> Left });
+      result.extend(quote! { ; });
+    }
+
+    result.extend(quote! {
+      bevy::ui::UiRect {
+        top:    #top,
+        right:  #right,
+        bottom: #bottom,
+        left:   #left,
+      }
+    });
+
+    quote! {{ #result }}
   }
 }

@@ -552,16 +552,16 @@ impl Generate for Color {
 
             transparent,
 
-            srgb(f32, f32, f32, f32),
+            srgb  (f32, f32, f32, f32),
             linear(f32, f32, f32, f32),
-            hsl(f32, f32, f32, f32),
-            hsv(f32, f32, f32, f32),
-            hwb(f32, f32, f32, f32),
-            lab(f32, f32, f32, f32),
-            lch(f32, f32, f32, f32),
-            oklab(f32, f32, f32, f32),
-            oklch(f32, f32, f32, f32),
-            xyz(f32, f32, f32, f32),
+            hsl   (f32, f32, f32, f32),
+            hsv   (f32, f32, f32, f32),
+            hwb   (f32, f32, f32, f32),
+            lab   (f32, f32, f32, f32),
+            lch   (f32, f32, f32, f32),
+            oklab (f32, f32, f32, f32),
+            oklch (f32, f32, f32, f32),
+            xyz   (f32, f32, f32, f32),
           }
 
           PredefinedColor::#name
@@ -580,5 +580,9 @@ impl Generate for Color {
       use bevy::color::*;
       Color::#kind(#value)
     }}
+  }
+
+  fn generate_default() -> proc_macro2::TokenStream {
+    quote! {bevy::color::Color::default()}
   }
 }

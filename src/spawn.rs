@@ -64,7 +64,7 @@ impl Generate for Spawn {
 #[derive(Clone)]
 enum Spawner {
   Ident(Ident),
-  Expr (Expr),
+  Expr (proc_macro2::TokenStream),
 }
 
 impl Parse for Spawner {
@@ -72,9 +72,8 @@ impl Parse for Spawner {
     if input.peek(Ident) {
       Ok(Spawner::Ident(input.parse()?))
     } else if input.peek(Bracket) {
-      let content;
-      bracketed!(content in input);
-      Ok(Spawner::Expr(content.parse()?))
+      let token = input.parse::<Group>()?;
+      Ok(Spawner::Expr(token.stream()))
     } else {
       Err(input.error("Expected identifier or expression"))
     }
@@ -86,7 +85,7 @@ impl Generate for Spawner {
     match self {
       Spawner::Ident(ident) => quote! { let spawner = &mut #ident; },
       Spawner::Expr (expr ) => quote! {
-        let mut spawner = #expr ;
+        let mut spawner = (#expr);
         let spawner = &mut spawner;
       },
     }

@@ -4,10 +4,10 @@ A simple crate that provides macros for simplifying some common Bevy tasks.
 
 Table of Contents:
 
-- [spawn!](#spawn)
-- [v!](#v)
-- [c!](#c)
-- [e!](#e)
+- [spawn!](#spawn) - Entity creation macro
+- [v!    ](#v    ) - Val enum simplification
+- [c!    ](#c    ) - Color enum simplification
+- [e!    ](#e    ) - UiRect struct simplification
 
 # `spawn!`
 
@@ -268,6 +268,34 @@ spawn! { commands
 }
 ```
 
+## Grammar
+
+* `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
+
+```txt
+spawn       ::= spawner top_level<';'>* ;
+
+definition  ::= '(' component<','>* ')' ('.' extension)* ;
+entity      ::= name? definition ;
+
+parented    ::= name '>' entity ;
+inserted    ::= name '+' definition ;
+
+child       ::= entity | inserted | code_block ;
+top_level   ::= entity | inserted | code_block | parented ;
+
+extension   ::= observe | children | method_call | code_block ;
+observe     ::= '(' argument ')' ;
+children    ::= '[' child<';'>* ']' ;
+method_call ::= name '(' argument<','>* ')' ;
+
+name        ::= IDENT ;
+spawner     ::= IDENT | '[' EXPR ']';
+argument    ::= EXPR ;
+component   ::= EXPR ;
+code_block  ::= EXPR_BLOCK ;
+```
+
 
 # `v!`
 
@@ -293,6 +321,23 @@ v!(@);
 v!(10%);
 v!(10px);
 v!(10 vw); // space not allowed, error will be thrown
+```
+
+## Grammar
+
+```txt
+v ::=
+  | 'auto'
+  | '@'
+  | number '%'
+  | number + 'px'
+  | number + 'vw'
+  | number + 'vh'
+  | number + 'vmin'
+  | number + 'vmax'
+  ;
+
+number ::= INT | FLOAT ;
 ```
 
 
@@ -361,6 +406,34 @@ the inner value that color represents. To do this, simply adding `!` before the 
 ```rs
 c!( #fff); // Color::Srgba(Srgba::new(1.0, 1.0, 1.0, 1.0))
 c!(!#000); //              Srgba::new(0.0, 0.0, 0.0, 1.0)
+```
+
+## Grammar
+
+```txt
+c ::= '!'? color;
+
+color ::=
+  | '#' + hex{3}    // #rgb
+  | '#' + hex{4}    // #rgba
+  | '#' + hex{6}    // #rrggbb
+  | '#' + hex{8}    // #rrggbbaa
+  | 'srgb'   '(' number<','>{3, 4} ')'
+  | 'linear' '(' number<','>{3, 4} ')'
+  | 'hsl'    '(' number<','>{3, 4} ')'
+  | 'hsv'    '(' number<','>{3, 4} ')'
+  | 'hwb'    '(' number<','>{3, 4} ')'
+  | 'lab'    '(' number<','>{3, 4} ')'
+  | 'lch'    '(' number<','>{3, 4} ')'
+  | 'oklab'  '(' number<','>{3, 4} ')'
+  | 'oklch'  '(' number<','>{3, 4} ')'
+  | 'xyz'    '(' number<','>{3, 4} ')'
+  // too many to list here
+  | <<<149 CSS named colors>>>
+  ;
+
+hex    ::= '0'..'9' | 'a'..'f' | 'A'..'F' ;
+number ::= INT | FLOAT ;
 ```
 
 

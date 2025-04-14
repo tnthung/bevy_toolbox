@@ -2,6 +2,7 @@ mod spawn;
 mod value;
 mod color;
 mod edges;
+mod turns;
 
 use proc_macro::TokenStream;
 use proc_macro2::Group;
@@ -482,6 +483,10 @@ pub fn e(input: TokenStream) -> TokenStream {
 
 trait Generate {
   fn generate(&self) -> proc_macro2::TokenStream;
+
+  fn generate_default() -> proc_macro2::TokenStream {
+    unimplemented!()
+  }
 }
 
 
@@ -501,4 +506,35 @@ fn apply<P: Parse+Generate>(input: TokenStream, allow_empty: bool) -> TokenStrea
     Ok(value) => value.generate(),
     Err(err) => err.to_compile_error(),
   }.into()
+}
+
+
+#[derive(Clone)]
+enum MightOmit<T> {
+  Value(T),
+  Omit(Span),
+}
+
+impl<T: Parse> Parse for MightOmit<T> {
+  fn parse(input: ParseStream) -> Result<Self> {
+    if input.peek(Token![_]) {
+      let token = input.parse::<Token![_]>()?;
+      return Ok(MightOmit::Omit(token.span));
+    }
+
+    Ok(MightOmit::Value(T::parse(input)?))
+  }
+}
+
+impl<T: Generate> Generate for MightOmit<T> {
+  fn generate(&self) -> proc_macro2::TokenStream {
+    match self {
+      MightOmit::Value(value) => value.generate(),
+      MightOmit::Omit(_) => T::generate_default(),
+    }
+  }
+
+  fn generate_default() -> proc_macro2::TokenStream {
+    T::generate_default()
+  }
 }
