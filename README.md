@@ -303,7 +303,8 @@ This macro is used to simplify the creation of the bevy's `Val` enum.
 
 ## Syntax
 
-There are 7 variants of the `Val` enum, so 7 corresponding syntaxes are provided.
+There are 7 variants of the `Val` enum, and 2 syntax for each non-auto variant. In total, there
+are 13 syntax.
 
 * `+` in between tokens means there can be no space between them.
 
@@ -314,12 +315,19 @@ There are 7 variants of the `Val` enum, so 7 corresponding syntaxes are provided
 1. `Val::Vh`      - `number + 'vh'` (e.g. `10vh`)
 1. `Val::Vmin`    - `number + 'vmin'` (e.g. `10vmin`)
 1. `Val::Vmax`    - `number + 'vmax'` (e.g. `10vmax`)
+1. `Val::Percent` - `{EXPR} + '%'` (e.g. `{10.0 + 20.0}%`)
+1. `Val::Px`      - `{EXPR} + 'px'` (e.g. `{10.0 + 20.0}px`)
+1. `Val::Vw`      - `{EXPR} + 'vw'` (e.g. `{10.0 + 20.0}vw`)
+1. `Val::Vh`      - `{EXPR} + 'vh'` (e.g. `{10.0 + 20.0}vh`)
+1. `Val::Vmin`    - `{EXPR} + 'vmin'` (e.g. `{10.0 + 20.0}vmin`)
+1. `Val::Vmax`    - `{EXPR} + 'vmax'` (e.g. `{10.0 + 20.0}vmax`)
 
-```rs
+```rs, no_run
 v!(auto);
 v!(@);
 v!(10%);
 v!(10px);
+v!({10.0 + 20.0}px);
 v!(10 vw); // space not allowed, error will be thrown
 ```
 
@@ -335,6 +343,12 @@ v ::=
   | number + 'vh'
   | number + 'vmin'
   | number + 'vmax'
+  | '{' EXPR '}' '%'
+  | '{' EXPR '}' 'px'
+  | '{' EXPR '}' 'vw'
+  | '{' EXPR '}' 'vh'
+  | '{' EXPR '}' 'vmin'
+  | '{' EXPR '}' 'vmax'
   ;
 
 number ::= INT | FLOAT ;
