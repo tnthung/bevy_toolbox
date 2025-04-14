@@ -71,13 +71,60 @@ impl Generate for Edges {
     let bottom = self.bottom.generate();
     let left   = self.left  .generate();
 
-    quote! {
+    let mut result = quote! {};
+
+    {
+      let span = match &self.top {
+        MightOmit::Omit (s) => s,
+        MightOmit::Value(t) => t.span(),
+      };
+
+      result.extend(quote! { struct });
+      result.extend(quote_spanned! {*span=> Top });
+      result.extend(quote! { ; });
+    }
+
+    {
+      let span = match &self.right {
+        MightOmit::Omit (s) => s,
+        MightOmit::Value(t) => t.span(),
+      };
+
+      result.extend(quote! { struct });
+      result.extend(quote_spanned! {*span=> Right });
+      result.extend(quote! { ; });
+    }
+
+    {
+      let span = match &self.bottom {
+        MightOmit::Omit (s) => s,
+        MightOmit::Value(t) => t.span(),
+      };
+
+      result.extend(quote! { struct });
+      result.extend(quote_spanned! {*span=> Bottom });
+      result.extend(quote! { ; });
+    }
+    {
+      let span = match &self.left {
+        MightOmit::Omit (s) => s,
+        MightOmit::Value(t) => t.span(),
+      };
+
+      result.extend(quote! { struct });
+      result.extend(quote_spanned! {*span=> Left });
+      result.extend(quote! { ; });
+    }
+
+    result.extend(quote! {
       bevy::ui::UiRect {
         top:    #top,
         right:  #right,
         bottom: #bottom,
         left:   #left,
       }
-    }
+    });
+
+    quote! {{ #result }}
   }
 }

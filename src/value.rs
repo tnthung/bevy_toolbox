@@ -100,3 +100,17 @@ impl Generate for Value {
     quote! { bevy::ui::Val::default() }
   }
 }
+
+impl Value {
+  pub fn span(&self) -> &Span {
+    match self {
+      Value::Auto   (span    ) => span,
+      Value::Px     (span, _ ) => span,
+      Value::Vw     (span, _ ) => span,
+      Value::Vh     (span, _ ) => span,
+      Value::VMin   (span, _ ) => span,
+      Value::VMax   (span, _ ) => span,
+      Value::Percent(span, ..) => span,
+    }
+  }
+}
