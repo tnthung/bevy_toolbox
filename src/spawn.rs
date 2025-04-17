@@ -95,21 +95,18 @@ impl Generate for Spawner {
 
 #[derive(Clone)]
 struct Definition {
-  components: Vec<Expr>,
+  components: proc_macro2::TokenStream,
   extensions: Vec<Extension>,
   children  : Vec<Children>,
 }
 
 impl Parse for Definition {
   fn parse(input: ParseStream) -> Result<Self> {
-    let components = {
-      let content;
-      parenthesized!(content in input);
+    if !input.peek(Paren) {
+      return Err(input.error("Expected '(' for definition"));
+    }
 
-      content
-        .parse_terminated(Expr::parse, Token![,])?
-        .into_iter().collect()
-    };
+    let components = input.parse::<Group>()?.stream();
 
     let extensions = {
       let mut extensions = vec![];
@@ -181,9 +178,7 @@ impl Generate for Entity {
     let Definition { components, extensions, children } = definition;
 
     let mut content = quote! {
-      let mut entity = spawner.spawn((
-        #(#components),*
-      ));
+      let mut entity = spawner.spawn((#components));
 
       let this = entity.id();
     };
@@ -227,9 +222,7 @@ impl Generate for Parented {
     let Definition { components, extensions, children } = definition;
 
     let mut content = quote! {
-      let mut entity = spawner.spawn((
-        #(#components),*
-      ));
+      let mut entity = spawner.spawn((#components));
 
       let this = entity.id();
       entity.set_parent(#parent);
@@ -274,9 +267,7 @@ impl Generate for Inserted {
 
     let mut content = quote! {
       let mut entity = spawner.entity(#base);
-      let mut entity = entity.insert((
-        #(#components),*
-      ));
+      let mut entity = entity.insert((#components));
 
       let this = entity.id();
     };
