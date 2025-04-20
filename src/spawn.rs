@@ -189,12 +189,7 @@ impl Generate for Entity {
     };
 
     for ext in extensions {
-      content.extend(match ext {
-        Extension::MethodCall(method   ) => method.generate(),
-        Extension::Observe   (arg      ) => quote! { entity.observe(#arg); },
-        Extension::CodeBlock (block    ) => quote! { #block },
-        Extension::Unfinished(dot, name) => quote! { entity #dot #name },
-      });
+      content.extend(ext.generate());
     }
 
     for group in children {
@@ -241,12 +236,7 @@ impl Generate for Parented {
     };
 
     for ext in extensions {
-      content.extend(match ext {
-        Extension::MethodCall(method   ) => method.generate(),
-        Extension::Observe   (arg      ) => quote! { entity.observe(#arg); },
-        Extension::CodeBlock (block    ) => quote! { #block },
-        Extension::Unfinished(dot, name) => quote! { entity #dot #name },
-      });
+      content.extend(ext.generate());
     }
 
     for group in children {
@@ -292,12 +282,7 @@ impl Generate for Inserted {
     };
 
     for ext in extensions {
-      content.extend(match ext {
-        Extension::MethodCall(method   ) => method.generate(),
-        Extension::Observe   (arg      ) => quote! { entity.observe(#arg); },
-        Extension::CodeBlock (block    ) => quote! { #block },
-        Extension::Unfinished(dot, name) => quote! { entity #dot #name },
-      });
+      content.extend(ext.generate());
     }
 
     for group in children {
@@ -410,6 +395,23 @@ impl Parse for Extension {
     }
 
     return Ok(Extension::Unfinished(dot, None));
+  }
+}
+
+impl Generate for Extension {
+  fn generate(&self) -> proc_macro2::TokenStream {
+    match self {
+      Extension::Observe   (arg      ) => quote! { entity.observe(#arg); },
+      Extension::MethodCall(method   ) => method.generate(),
+      Extension::CodeBlock (block    ) => quote! {{ let mut entity = entity.reborrow(); #block }},
+      Extension::Unfinished(dot, name) => {
+        if let Some(name) = name {
+          quote! { #dot #name }
+        } else {
+          quote! { #dot }
+        }
+      },
+    }
   }
 }
 
