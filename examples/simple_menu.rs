@@ -60,7 +60,7 @@ fn setup(mut commands: Commands) {
           println!("Exit Game");
           ew.send(AppExit::Success);
         });
-      };
+      }
     ];
   }
 }
