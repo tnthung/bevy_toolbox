@@ -272,32 +272,145 @@ use quote::*;
 /// }
 /// ```
 ///
+/// ## Flow Control
+///
+/// `if`, `if_let`, `for`, `while`, and `while_let` are supported in the macro. The syntax is similar
+/// to the Rust syntax, but the body is in the DSL this macro provides. The flow control can be used
+/// in the top level and children group.
+///
+/// ### If
+///
+/// ```rs, no_run
+/// fn foo(mut commands: Commands, number: i32) {
+///   spawn! { commands
+///     if number > 0 {
+///       (Text::new("It's positive!"));
+///     }
+///
+///     // you can also use `else if` statement
+///     else if number < 0 {
+///       (Text::new("It's negative!"));
+///     }
+///
+///     // or just `else`
+///     else {
+///       (Text::new("It's zero!"));
+///     }
+///   }
+/// }
+/// ```
+///
+/// ### If Let
+///
+/// ```rs, no_run
+/// fn foo(mut commands: Commands, number: Option<u32>) {
+///   spawn! { commands
+///     if let None = number {
+///       (Text::new("No number!"));
+///     }
+///
+///     // `else for` is also supported, but it must be the last control flow
+///     // in fact, `else for`, `else while`, `else while let` are all supported
+///     // but they must be the last else statement
+///     else for i in 0..number.unwrap() {
+///       (Text::new(format!("Number: {i}")), Node {
+///         top: v!({i as f32 * 20.0}px),
+///         ..Default::default()
+///       });
+///     }
+///   }
+/// }
+/// ```
+///
+/// ### For
+///
+/// ```rs, no_run
+/// fn foo(mut commands: Commands, number: i32) {
+///   spawn! { commands
+///     for i in 0..number {
+///       if i == 100 {
+///         // break is supported
+///         break;
+///       }
+///
+///       (Text::new(format!("Number: {i}")), Node {
+///        top: v!({i as f32 * 20.0}px),
+///        ..Default::default()
+///       });
+///     }
+///   }
+/// }
+/// ```
+///
+/// ### While
+///
+/// ```rs, no_run
+/// fn foo(mut commands: Commands, number: i32) {
+///   spawn! { commands
+///     while number > 0 {
+///       if number % 3 == 1 {
+///         // continue is supported
+///         continue;
+///       }
+///
+///       (Text::new(format!("Number: {number}")), Node {
+///         top: v!({number as f32 * 20.0}px),
+///         ..Default::default()
+///       });
+///     }
+///   }
+/// }
+/// ```
+///
+/// ### While Let
+///
+/// ```rs, no_run
+/// fn foo(mut commands: Commands, string: String) {
+///   spawn! { commands
+///     while let Some(c) = string.pop() {
+///       (Text::new(format!("Char: {c}")), Node {
+///         top: v!({string.len() as f32 * 20.0}px),
+///         ..Default::default()
+///       });
+///     }
+///   }
+/// }
+/// ```
+///
 /// # Grammar
 ///
 /// * `<TOKEN>*` means repeat 0-inf times separated by `TOKEN`, the last `TOKEN` is optional.
 ///
 /// ```txt
-/// spawn       ::= spawner top_level<';'>* ;
+/// spawn        ::= spawner (top_level | ';')* ;
 ///
-/// definition  ::= '(' component<','>* ')' ('.' extension)* ;
-/// entity      ::= name? definition ;
+/// definition   ::= '(' component<','>* ')' ('.' extension)* ('.' children)* ;
+/// entity       ::= name? definition ;
 ///
-/// parented    ::= name '>' entity ;
-/// inserted    ::= name '+' definition ;
+/// parented     ::= name '>' entity ;
+/// inserted     ::= name '+' definition ;
 ///
-/// child       ::= entity | inserted | code_block ;
-/// top_level   ::= entity | inserted | code_block | parented ;
+/// child        ::= entity | inserted | flow<child    > | code_block ;
+/// top_level    ::= entity | inserted | flow<top_level> | code_block | parented ;
 ///
-/// extension   ::= observe | children | method_call | code_block ;
-/// observe     ::= '(' argument ')' ;
-/// children    ::= '[' child<';'>* ']' ;
-/// method_call ::= name '(' argument<','>* ')' ;
+/// extension    ::= observe | method_call | code_block ;
+/// observe      ::= '(' argument ')' ;
+/// children     ::= '[' (child | ';')* ']' ;
+/// method_call  ::= name '(' argument<','>* ')' ;
 ///
-/// name        ::= IDENT ;
-/// spawner     ::= IDENT | '[' EXPR ']';
-/// argument    ::= EXPR ;
-/// component   ::= EXPR ;
-/// code_block  ::= EXPR_BLOCK ;
+/// flow     <T> ::= if<T> | if_let<T> | for<T> | while<T> | while_let<T> ;
+/// control  <T> ::= 'break' | 'continue' | T | ';' ;
+/// if       <T> ::= 'if' EXPR '{' control<T>* '}' ('else' flow<T>)?;
+/// if_let   <T> ::= 'if' 'let' PAT '=' EXPR '{' control<T>* '}' ('else' flow<T>)?;
+/// for      <T> ::= 'for' PAT in EXPR '{' control<T>* '}' ;
+/// while    <T> ::= 'while' EXPR '{' control<T>* '}' ;
+/// while_let<T> ::= 'while' 'let' PAT '=' EXPR '{' control<T>* '}' ;
+///
+/// name         ::= IDENT ;
+/// spawner      ::= IDENT | '[' EXPR ']' ;
+/// argument     ::= EXPR ;
+/// component    ::= EXPR ;
+/// code_block   ::= EXPR_BLOCK ;
 /// ```
 #[proc_macro]
 pub fn spawn(input: TokenStream) -> TokenStream {

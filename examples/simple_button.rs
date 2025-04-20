@@ -42,7 +42,7 @@ fn setup(mut commands: Commands) {
 
     { // Acknowledge the button has been spawned
       println!("Button {simple_button:?} spawned!");
-    };
+    }
   }
 }
 
