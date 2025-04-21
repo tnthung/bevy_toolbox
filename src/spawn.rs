@@ -335,8 +335,8 @@ impl Generate for Child {
     match self {
       Child::CodeBlock(block   ) => quote! { #block },
       Child::Inserted (inserted) => inserted.generate(),
-      Child::Flow     (flow    ) => flow    .generate(),
-      Child::Entity(entity) => {
+      Child::Flow     (flow    ) => flow    .gen_irrefutable(),
+      Child::Entity   (entity  ) => {
         let parent = Ident::new("parent", Span::call_site());
         let entity = entity.clone();
         Parented { parent, entity }.generate()
@@ -383,7 +383,7 @@ impl Generate for TopLevel {
       TopLevel::Entity   (entity  ) => entity  .generate(),
       TopLevel::Parented (parented) => parented.generate(),
       TopLevel::Inserted (inserted) => inserted.generate(),
-      TopLevel::Flow     (flow    ) => flow    .generate(),
+      TopLevel::Flow     (flow    ) => flow    .gen_irrefutable(),
       TopLevel::CodeBlock(block   ) => quote! { #block },
     }
   }
@@ -559,6 +559,16 @@ impl<T: Generate+Parse> Generate for Flow<T> {
       Flow::For     (for_     ) => for_     .generate(),
       Flow::While   (while_   ) => while_   .generate(),
       Flow::WhileLet(while_let) => while_let.generate(),
+    }
+  }
+}
+
+impl<T: Generate+Parse> Flow<T> {
+  fn gen_irrefutable(&self) -> proc_macro2::TokenStream {
+    let content = self.generate();
+    quote! {
+      #[allow(irrefutable_let_patterns)]
+      #content
     }
   }
 }
@@ -864,6 +874,7 @@ impl<T: Generate+Parse> Generate for WhileLet<T> {
     let WhileLet { while_, let_, pattern, condition, body } = self;
 
     let header = quote! {
+      #[allow(irrefutable_let_patterns)]
       #while_ #let_ #pattern = #condition
     };
 
