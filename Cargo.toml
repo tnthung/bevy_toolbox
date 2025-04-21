@@ -24,3 +24,7 @@ path = "examples/simple_button.rs"
 [[example]]
 name = "simple_menu"
 path = "examples/simple_menu.rs"
+
+[[example]]
+name = "forty_buttons"
+path = "examples/forty_buttons.rs"
