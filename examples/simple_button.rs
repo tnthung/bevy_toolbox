@@ -33,10 +33,10 @@ fn setup(mut commands: Commands) {
       // Add a click event to the button
       .(|_: Trigger<Pointer<Click>>| { println!("Hello, World!"); })
       // Some fancy button styling
-      .(change_background_color::<Pointer<Over>>(c!(#049DD9)))
-      .(change_background_color::<Pointer<Out >>(c!(#0477BF)))
-      .(change_background_color::<Pointer<Down>>(c!(#04B2D9)))
-      .(change_background_color::<Pointer<Up  >>(c!(#049DD9)))
+      .(change_background_color::<Pointer<Over    >>(c!(#049DD9)))
+      .(change_background_color::<Pointer<Out     >>(c!(#0477BF)))
+      .(change_background_color::<Pointer<Pressed >>(c!(#04B2D9)))
+      .(change_background_color::<Pointer<Released>>(c!(#049DD9)))
       // Add a text to the button
       .[(Text::new("Click me!"))];
 
@@ -48,5 +48,5 @@ fn setup(mut commands: Commands) {
 
 
 fn change_background_color<E: Event>(color: Color) -> impl FnMut(Trigger<E>, Commands) {
-  move |t, mut cmds| { cmds.entity(t.entity()).insert(BackgroundColor(color)); }
+  move |t, mut cmds| { cmds.entity(t.target()).insert(BackgroundColor(color)); }
 }

@@ -236,10 +236,9 @@ impl Generate for Parented {
     let Definition { components, extensions, children } = definition;
 
     let mut content = quote! {
-      let mut entity = spawner.spawn((#components));
+      let mut entity = spawner.spawn((ChildOf(#parent), #components));
 
       let this = entity.id();
-      entity.set_parent(#parent);
     };
 
     for ext in extensions {
