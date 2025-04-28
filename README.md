@@ -2,6 +2,11 @@
 
 A simple crate that provides macros for simplifying some common Bevy tasks.
 
+| Version | Bevy Version |
+| ------- | ------------ |
+| 0.1.*   | 0.15.*       |
+| 0.2.*   | 0.16.*       |
+
 Table of Contents:
 
 - [spawn!](#spawn) - Entity creation macro

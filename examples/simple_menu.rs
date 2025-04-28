@@ -58,7 +58,7 @@ fn setup(mut commands: Commands) {
         new_button(commands.reborrow(), settings , "Settings" , |_: T| { println!("Settings" ); });
         new_button(commands.reborrow(), exit_game, "Exit Game", |_: T, mut ew: EventWriter<AppExit>| {
           println!("Exit Game");
-          ew.send(AppExit::Success);
+          ew.write(AppExit::Success);
         });
       }
     ];
@@ -74,7 +74,7 @@ fn new_button<B: Bundle, M>(mut commands: Commands, entity: Entity, text: impl A
   const COLOR_ACTIVE : Color = c!( #48A6A7);
 
   fn change_background_color<E: Event>(color: Color) -> impl FnMut(Trigger<E>, Commands) {
-    move |t, mut cmds| { cmds.entity(t.entity()).insert(BackgroundColor(color)); }
+    move |t, mut cmds| { cmds.entity(t.target()).insert(BackgroundColor(color)); }
   }
 
   fn change_cursor_icon<E: Event>(cursor: CursorIcon) -> impl FnMut(Trigger<E>, Commands, Single<Entity, With<PrimaryWindow>>) {
@@ -95,12 +95,12 @@ fn new_button<B: Bundle, M>(mut commands: Commands, entity: Entity, text: impl A
       // Add a click event to the button
       .(cb)
       // Some fancy button styling
-      .(change_cursor_icon     ::<Pointer<Over>>(ICON_HOVER   ))
-      .(change_cursor_icon     ::<Pointer<Out >>(ICON_DEFAULT ))
-      .(change_background_color::<Pointer<Over>>(COLOR_HOVER  ))
-      .(change_background_color::<Pointer<Out >>(COLOR_DEFAULT))
-      .(change_background_color::<Pointer<Down>>(COLOR_ACTIVE ))
-      .(change_background_color::<Pointer<Up  >>(COLOR_HOVER  ))
+      .(change_cursor_icon     ::<Pointer<Over    >>(ICON_HOVER   ))
+      .(change_cursor_icon     ::<Pointer<Out     >>(ICON_DEFAULT ))
+      .(change_background_color::<Pointer<Over    >>(COLOR_HOVER  ))
+      .(change_background_color::<Pointer<Out     >>(COLOR_DEFAULT))
+      .(change_background_color::<Pointer<Pressed >>(COLOR_ACTIVE ))
+      .(change_background_color::<Pointer<Released>>(COLOR_HOVER  ))
       // Add a text to the button
       .[(Text::new(text.as_ref()))];
   }
